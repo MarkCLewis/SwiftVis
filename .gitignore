@@ -69,3 +69,7 @@ local.properties
 # Code Recommenders
 .recommenders/
 
+*.svf
+*.svt
+ss.or*
+*.so
