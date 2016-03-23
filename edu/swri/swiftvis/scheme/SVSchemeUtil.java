@@ -1,0 +1,780 @@
+/*
+ * Created on Jul 3, 2005
+ */
+package edu.swri.swiftvis.scheme;
+
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.geom.Area;
+import java.awt.geom.Ellipse2D;
+import java.awt.geom.GeneralPath;
+import java.awt.geom.Line2D;
+import java.awt.geom.Point2D;
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.channels.FileChannel;
+import java.util.List;
+
+import edu.swri.swiftvis.DataElement;
+import edu.swri.swiftvis.DataSink;
+import edu.swri.swiftvis.OptionsData;
+import edu.swri.swiftvis.plot.PlotTransform;
+import edu.swri.swiftvis.util.BinaryInput;
+import edu.swri.swiftvis.util.TextReader;
+
+public class SVSchemeUtil {
+    /**
+     * If you want a Scheme Environment inside of SwiftVis, you should call this method if you
+     * don't want the extra environment variables outside of user input code.  The static methods
+     * below provide extra environment variables that can be used for sources, filters, plots, and
+     * in regular formulas.
+     * @return The basic SwiftVis global environment for Scheme.
+     */
+    public static SchemeEnvironment defaultGlobalEnvironment() {
+        if(globalEnv==null) {
+            globalEnv=SchemeEnvironment.defaultGlobalEnvironment();
+            SchemeConsole.parseAndExecuteMany(OptionsData.instance().getSchemeSource(),globalEnv);
+        }
+        return globalEnv;
+    }
+    
+    public static void resetGlobalEnvironment() {
+        globalEnv=null;
+        SchemeEnvironment.resetGlobalEnvironment();
+    }
+    
+    public static SchemeEnvironment sourceEnvironment(FileInputStream[] files) throws IOException {
+        SchemeEnvironment ret=new SchemeEnvironment(defaultGlobalEnvironment(),true);
+        /*
+         * Elements act as a list of two lists ((p0 p1 ...) (v0 v1 ...)) 
+         * 
+         * A filter function or a data source should return a list of elements. That will likely
+         * be documented in the SchemeFilter and SchemeSource when I get around to writing them.
+         * 
+         * The sources also need the ability to read things from a file.  For that we have the
+         * following read functions.  The names are fairly self-explanitory.
+         * (readText [file=0]) - reads up to the next space and tries to make it a number.
+         * (readLine [file=0]) - returns a list of values.
+         * (skipWord [file=0]) - read up to next whitespace and return ().
+         * (skipLine [file=0]) - read next line and return ().
+         * (readInt2 [file=0])
+         * (readInt4 [file=0])
+         * (readInt8 [file=0])
+         * (readReal4 [file=0])
+         * (readReal8 [file=0])
+         * (readInt2XDR [file=0])
+         * (readInt4XDR [file=0])
+         * (readInt8XDR [file=0])
+         * (readReal4XDR [file=0])
+         * (readReal8XDR [file=0])
+         * (EOF [file=0])
+         */
+        BinaryInput[] binIn=new BinaryInput[files.length];
+        TextReader[] textRead=new TextReader[files.length];
+        FileChannel[] channels=new FileChannel[files.length];
+        for(int i=0; i<files.length; ++i) {
+            binIn[i]=new BinaryInput(new DataInputStream(new BufferedInputStream(files[i])));
+            textRead[i]=new TextReader(new InputStreamReader(new BufferedInputStream(files[i])));
+            channels[i]=files[i].getChannel();
+        }
+        ret.addNameValue("readText",new ReadText(textRead));
+        ret.addNameValue("readLine",new ReadLine(textRead));
+        ret.addNameValue("skipWord",new SkipWord(textRead));
+        ret.addNameValue("skipLine",new SkipLine(textRead));
+        ret.addNameValue("readInt2",new ReadInt2(binIn));
+        ret.addNameValue("readInt4",new ReadInt4(binIn));
+        ret.addNameValue("readInt8",new ReadInt8(binIn));
+        ret.addNameValue("readReal4",new ReadReal4(binIn));
+        ret.addNameValue("readReal8",new ReadReal8(binIn));
+        ret.addNameValue("readInt2XDR",new ReadInt2XDR(binIn));
+        ret.addNameValue("readInt4XDR",new ReadInt4XDR(binIn));
+        ret.addNameValue("readInt8XDR",new ReadInt8XDR(binIn));
+        ret.addNameValue("readReal4XDR",new ReadReal4XDR(binIn));
+        ret.addNameValue("readReal8XDR",new ReadReal8XDR(binIn));
+        ret.addNameValue("EOF",new EOF(channels));
+        return ret;
+    }
+    
+    public static SchemeEnvironment filterEnvironment(DataSink sink) {
+        SchemeEnvironment ret=new SchemeEnvironment(defaultGlobalEnvironment(),true);
+        /*
+         * Elements act as a list of two lists ((p0 p1 ...) (v0 v1 ...)) 
+         * 
+         * These are used for the scheme based filter and plot classes.  A filter function
+         * or a data source should return a list of elements. That will likely be documented in the
+         * SchemeFilter and SchemeSource when I get around to writing them.
+         * (elements [source=0]) - list of elements for specified source:int
+         */
+        ret.addNameValue("elements",new Elements(sink));
+        return ret;
+    }
+    
+    public static SchemeEnvironment plotEnvironment(DataSink sink,Graphics2D g,PlotTransform trans) {
+        SchemeEnvironment ret=new SchemeEnvironment(defaultGlobalEnvironment(),true);
+        /*
+         * Elements act as a list of two lists ((p0 p1 ...) (v0 v1 ...)) 
+         * 
+         * These are used for the scheme based filter and plot classes.
+         * (elements [source=0]) - list of elements for specified source:int
+         * 
+         * These are used for plotting styles.  Basically, they are functions for drawing things.
+         * The SchemePlotStyle will need a fair bit of documentation because while the filter really
+         * only needs a redoAllElements method, the plotting styles have more methods that will have
+         * to be specified for it to work.
+         * (setColor r g b [a=1]) - sets color to float rgb[a] values.
+         * (setStrokeWidth width) - sets the store to the specified width.
+         * (fillPoly p1 p2 p3 ...) - fills a polygon with the specified points.
+         * (drawPoly p1 p2 p3 ...) - draws a polygon with the specified points.
+         * (drawPolyList (p1 p2 p3 ...)) - draws a polygon with the specified points.
+         * (drawLine p1 p2) - draw a line between these points.
+         * (fillEllipse p w h) - fill an ellipse centered at p with the given width and height.
+         * (drawEllipse p w h) - draw similar ellipse.
+         */
+        ret.addNameValue("elements",new Elements(sink));
+        ret.addNameValue("setColor",new SetColor(g));        
+        ret.addNameValue("setStrokeWidth",new SetStrokeWidth(g));        
+        ret.addNameValue("fillPoly",new FillPoly(g,trans));        
+        ret.addNameValue("fillPolyList",new FillPolyList(g,trans));        
+        ret.addNameValue("drawPoly",new DrawPoly(g,trans));        
+        ret.addNameValue("drawPolyList",new DrawPolyList(g,trans));        
+        ret.addNameValue("drawLine",new DrawLine(g,trans));        
+        ret.addNameValue("fillEllipse",new FillEllipse(g,trans));        
+        ret.addNameValue("drawEllipse",new DrawEllipse(g,trans));        
+        return ret;
+    }
+    
+    public static SchemeEnvironment formulaEnvironment(DataSink sink,int index,int[] se) {
+        SchemeEnvironment ret=new SchemeEnvironment(defaultGlobalEnvironment(),true);
+        /*
+         * Elements act as a list of two lists ((p0 p1 ...) (v0 v1 ...)) 
+         * 
+         * These are the value and functions used mainly for single element computations 
+         * currentIndex - index of the current element
+         * v - list of values for current element in source 0
+         * p - list of parameters for current element in source 0
+         * (element [source=0 [offset=0]]) - element list for specified source:int offset:int
+         *     returns () is either is out of range.
+         * (value which) - a value from the current element in source 0
+         * (param which) - a parameter for the current element in source 0
+         * (special which [source=0]) - returns the proper special element in the group.  which is zero referenced.
+         *     returns () if either is out of range.
+         */
+        DataElement de=sink.getSource(0).getElement(index, 0);
+        ret.addNameValue("v",makeValueList(de));
+        ret.addNameValue("p",makeParamList(de));
+        ret.addNameValue("element",new Element(sink,index));
+        ret.addNameValue("value",new Value(de));
+        ret.addNameValue("param",new Param(de));
+        ret.addNameValue("special",new Special(sink,se));
+        return ret;
+    }        
+
+    public static ConsCell makeParamList(DataElement de) {
+        ConsCell ret=ConsCell.nullInstance();
+        for(int i=de.getNumParams()-1; i>=0; --i) {
+            ret=new ConsCell(new SchemeValue(de.getParam(i)),ret);
+        }
+        return ret;
+    }
+
+    public static ConsCell makeValueList(DataElement de) {
+        ConsCell ret=ConsCell.nullInstance();
+        for(int i=de.getNumValues()-1; i>=0; --i) {
+            ret=new ConsCell(new SchemeValue(de.getValue(i)),ret);
+        }
+        return ret;
+    }
+    
+    public static ConsCell makeElement(DataElement de) {
+        return new ConsCell(makeParamList(de),new ConsCell(makeValueList(de),ConsCell.nullInstance()));
+    }
+        
+    public static DataElement makeDataElementFromList(SchemeElement elem) {
+        SchemeElement paramsList=elem.car();
+        int[] params=new int[((ConsCell)paramsList).length()];
+        int i=0;
+        for(SchemeElement rover=paramsList; rover!=ConsCell.nullInstance(); rover=rover.cdr(),++i) {
+            params[i]=(int)((SchemeValue)rover.car()).numericValue();
+        }
+        SchemeElement valuesList=elem.cdr().car();
+        float[] values=new float[((ConsCell)valuesList).length()];
+        i=0;
+        for(SchemeElement rover=valuesList; rover!=ConsCell.nullInstance(); rover=rover.cdr(),++i) {
+            values[i]=(float)((SchemeValue)rover.car()).numericValue();
+        }        
+        return new DataElement(params,values);
+    }
+    
+    public static void fillListWithSchemeList(SchemeElement se,List<DataElement> list) {
+        for(SchemeElement rover=se; rover!=ConsCell.nullInstance(); rover=rover.cdr()) {
+            list.add(makeDataElementFromList(rover.car()));
+        }        
+    }
+    
+    public static float getXFromList(SchemeElement se,SchemeEnvironment env) {
+        return (float)((SchemeValue)se.car().eval(env)).numericValue();
+    }
+
+    public static float getYFromList(SchemeElement se,SchemeEnvironment env) {
+        return (float)((SchemeValue)se.cdr().car().eval(env)).numericValue();
+    }
+
+    private static SchemeEnvironment globalEnv=null;
+    
+    private static class Element extends HardcodedFunction {
+        public Element(DataSink s,int i) {
+            sink=s;
+            index=i;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env,ConsCell args) {
+            int source=0,offset=0;
+            if(args!=ConsCell.nullInstance()) {
+                source=(int)(((SchemeValue)args.car().eval(env)).numericValue());
+                if(args.cdr()!=ConsCell.nullInstance()) {
+                    offset=(int)(((SchemeValue)args.cdr().car().eval(env)).numericValue());
+                }
+            }
+            if(source<0 || source>=sink.getNumSources()) return ConsCell.nullInstance();
+            if(index+offset<0 || index+offset>=sink.getSource(source).getNumElements(0)) return ConsCell.nullInstance();
+            return makeElement(sink.getSource(source).getElement(index+offset, 0));
+        }
+        private DataSink sink;
+        private int index;
+        
+        private static final long serialVersionUID=32609847651364l;
+    }
+    private static class Value extends HardcodedFunction {
+        public Value(DataElement de) {
+            elem=de;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env,ConsCell args) {
+            int which=0;
+            which=(int)(((SchemeValue)args.car().eval(env)).numericValue());
+            return new SchemeValue(elem.getValue(which));
+        }
+        private DataElement elem;
+        private static final long serialVersionUID=6824508927457l;
+    }
+    private static class Param extends HardcodedFunction {
+        public Param(DataElement de) {
+            elem=de;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env,ConsCell args) {
+            int which=0;
+            which=(int)(((SchemeValue)args.car().eval(env)).numericValue());
+            return new SchemeValue(elem.getParam(which));
+        }
+        private DataElement elem;
+        private static final long serialVersionUID=24572098376l;
+    }
+    private static class Special extends HardcodedFunction {
+        public Special(DataSink s,int[] se) {
+            sink=s;
+            specialElems=se;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env,ConsCell args) {
+            int source=0,sindex=0;
+            sindex=(int)(((SchemeValue)args.car().eval(env)).numericValue());
+            if(args.cdr()!=ConsCell.nullInstance()) {
+                source=(int)(((SchemeValue)args.cdr().car().eval(env)).numericValue());
+            }
+            if(source<0 || source>=sink.getNumSources()) return ConsCell.nullInstance();
+            if(sindex<0 || sindex>=specialElems.length) return ConsCell.nullInstance();
+            return makeElement(sink.getSource(source).getElement(specialElems[sindex], 0));
+        }
+        private DataSink sink;
+        private int[] specialElems;
+        private static final long serialVersionUID=93256098756l;
+    }
+    private static class Elements extends HardcodedFunction {
+        public Elements(DataSink s) {
+            sink=s;
+            returnValues=new SchemeElement[sink.getNumSources()];
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env,ConsCell args) {
+            int source=0;
+            if(args!=ConsCell.nullInstance()) {
+                source=(int)(((SchemeValue)args.car().eval(env)).numericValue());
+            }
+            if(source<0 || source>=sink.getNumSources()) return ConsCell.nullInstance();
+            if(returnValues[source]!=null) return returnValues[source];
+            ConsCell ret=ConsCell.nullInstance();
+            for(int i=sink.getSource(source).getNumElements(0)-1; i>=0; --i) {
+                ret=new ConsCell(makeElement(sink.getSource(source).getElement(i, 0)),ret);
+            }
+            returnValues[source]=ret;
+            return ret;
+        }
+        private DataSink sink;
+        private SchemeElement[] returnValues;        
+        private static final long serialVersionUID=72873486348023l;
+    }
+    private static class ReadText extends HardcodedFunction {
+        public ReadText(TextReader[] textrd) {
+            in=textrd;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            try {
+                int file=0;
+                if(args!=ConsCell.nullInstance())
+                    file=(int)((SchemeValue)args.car().eval(env)).numericValue();
+                return new SchemeValue(in[file].readDouble());
+            } catch(IOException e) {
+                throw new SchemeException("Error reading text double.",e);
+            }
+        }
+        private TextReader[] in;
+        private static final long serialVersionUID=78309235732237l;
+    }
+    private static class ReadLine extends HardcodedFunction {
+        public ReadLine(TextReader[] textrd) {
+            in=textrd;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            try {
+                int file=0;
+                if(args!=ConsCell.nullInstance())
+                    file=(int)((SchemeValue)args.car().eval(env)).numericValue();
+                String[] words=in[file].readLine().split("[ \t\n]");
+                SchemeElement ret=ConsCell.nullInstance();
+                for(int i=words.length-1; i>=0; --i) {
+                    ret=new ConsCell(new SchemeValue(Double.parseDouble(words[i])),ret);
+                }
+                return ret;
+            } catch(IOException e) {
+                throw new SchemeException("Error reading text line.",e);
+            } catch(NumberFormatException e) {
+                throw new SchemeException("Error reading text line, non-number found.",e);                
+            }
+        }
+        private TextReader[] in;
+        private static final long serialVersionUID=346982375612357l;
+    }
+    private static class SkipWord extends HardcodedFunction {
+        public SkipWord(TextReader[] textrd) {
+            in=textrd;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            try {
+                int file=0;
+                if(args!=ConsCell.nullInstance())
+                    file=(int)((SchemeValue)args.car().eval(env)).numericValue();
+                in[file].readWord();
+            } catch(IOException e) {
+                throw new SchemeException("Error skipping word.",e);
+            }
+            return ConsCell.nullInstance();
+        }
+        private TextReader[] in;
+        private static final long serialVersionUID=23670893434457l;
+    }
+    private static class SkipLine extends HardcodedFunction {
+        public SkipLine(TextReader[] textrd) {
+            in=textrd;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            try {
+                int file=0;
+                if(args!=ConsCell.nullInstance())
+                    file=(int)((SchemeValue)args.car().eval(env)).numericValue();
+                in[file].readLine();
+            } catch(IOException e) {
+                throw new SchemeException("Error skipping line.",e);
+            }
+            return ConsCell.nullInstance();
+        }
+        private TextReader[] in;
+        private static final long serialVersionUID=22572123267983l;
+    }
+    private static class ReadInt2 extends HardcodedFunction {
+        public ReadInt2(BinaryInput[] binIn) {
+            in=binIn;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            try {
+                int file=0;
+                if(args!=ConsCell.nullInstance())
+                    file=(int)((SchemeValue)args.car().eval(env)).numericValue();
+                return new SchemeValue(in[file].readInt2());
+            } catch(IOException e) {
+                throw new SchemeException("Error reading int*2.",e);
+            }
+        }
+        private BinaryInput[] in;
+        private static final long serialVersionUID=945683434834568l;
+    }
+    private static class ReadInt4 extends HardcodedFunction {
+        public ReadInt4(BinaryInput[] binIn) {
+            in=binIn;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            try {
+                int file=0;
+                if(args!=ConsCell.nullInstance())
+                    file=(int)((SchemeValue)args.car().eval(env)).numericValue();
+                return new SchemeValue(in[file].readInt4());
+            } catch(IOException e) {
+                throw new SchemeException("Error reading int*4.",e);
+            }
+        }
+        private BinaryInput[] in;
+        private static final long serialVersionUID=232593478578569l;
+    }
+    private static class ReadInt8 extends HardcodedFunction {
+        public ReadInt8(BinaryInput[] binIn) {
+            in=binIn;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            try {
+                int file=0;
+                if(args!=ConsCell.nullInstance())
+                    file=(int)((SchemeValue)args.car().eval(env)).numericValue();
+                return new SchemeValue(in[file].readInt8());
+            } catch(IOException e) {
+                throw new SchemeException("Error reading int*8.",e);
+            }
+        }
+        private BinaryInput[] in;
+        private static final long serialVersionUID=2666345673476347l;
+    }
+    private static class ReadReal4 extends HardcodedFunction {
+        public ReadReal4(BinaryInput[] binIn) {
+            in=binIn;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            try {
+                int file=0;
+                if(args!=ConsCell.nullInstance())
+                    file=(int)((SchemeValue)args.car().eval(env)).numericValue();
+                return new SchemeValue(in[file].readReal4());
+            } catch(IOException e) {
+                throw new SchemeException("Error reading real*4.",e);
+            }
+        }
+        private BinaryInput[] in;
+        private static final long serialVersionUID=32535345034875347l;
+    }
+    private static class ReadReal8 extends HardcodedFunction {
+        public ReadReal8(BinaryInput[] binIn) {
+            in=binIn;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            try {
+                int file=0;
+                if(args!=ConsCell.nullInstance())
+                    file=(int)((SchemeValue)args.car().eval(env)).numericValue();
+                return new SchemeValue(in[file].readReal8());
+            } catch(IOException e) {
+                throw new SchemeException("Error reading real*8.",e);
+            }
+        }
+        private BinaryInput[] in;
+        private static final long serialVersionUID=99448845123546345l;
+    }
+    private static class ReadInt2XDR extends HardcodedFunction {
+        public ReadInt2XDR(BinaryInput[] binIn) {
+            in=binIn;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            try {
+                int file=0;
+                if(args!=ConsCell.nullInstance())
+                    file=(int)((SchemeValue)args.car().eval(env)).numericValue();
+                return new SchemeValue(in[file].readIntXDR2());
+            } catch(IOException e) {
+                throw new SchemeException("Error reading intXDR*2.",e);
+            }
+        }
+        private BinaryInput[] in;
+        private static final long serialVersionUID=945683434834568l;
+    }
+    private static class ReadInt4XDR extends HardcodedFunction {
+        public ReadInt4XDR(BinaryInput[] binIn) {
+            in=binIn;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            try {
+                int file=0;
+                if(args!=ConsCell.nullInstance())
+                    file=(int)((SchemeValue)args.car().eval(env)).numericValue();
+                return new SchemeValue(in[file].readIntXDR4());
+            } catch(IOException e) {
+                throw new SchemeException("Error reading intXDR*4.",e);
+            }
+        }
+        private BinaryInput[] in;
+        private static final long serialVersionUID=232593478578569l;
+    }
+    private static class ReadInt8XDR extends HardcodedFunction {
+        public ReadInt8XDR(BinaryInput[] binIn) {
+            in=binIn;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            try {
+                int file=0;
+                if(args!=ConsCell.nullInstance())
+                    file=(int)((SchemeValue)args.car().eval(env)).numericValue();
+                return new SchemeValue(in[file].readIntXDR8());
+            } catch(IOException e) {
+                throw new SchemeException("Error reading intXDR*8.",e);
+            }
+        }
+        private BinaryInput[] in;
+        private static final long serialVersionUID=2666345673476347l;
+    }
+    private static class ReadReal4XDR extends HardcodedFunction {
+        public ReadReal4XDR(BinaryInput[] binIn) {
+            in=binIn;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            try {
+                int file=0;
+                if(args!=ConsCell.nullInstance())
+                    file=(int)((SchemeValue)args.car().eval(env)).numericValue();
+                return new SchemeValue(in[file].readXDR4());
+            } catch(IOException e) {
+                throw new SchemeException("Error reading realXDR*4.",e);
+            }
+        }
+        private BinaryInput[] in;
+        private static final long serialVersionUID=32535345034875347l;
+    }
+    private static class ReadReal8XDR extends HardcodedFunction {
+        public ReadReal8XDR(BinaryInput[] binIn) {
+            in=binIn;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            try {
+                int file=0;
+                if(args!=ConsCell.nullInstance())
+                    file=(int)((SchemeValue)args.car().eval(env)).numericValue();
+                return new SchemeValue(in[file].readXDR8());
+            } catch(IOException e) {
+                throw new SchemeException("Error reading realXDR*8.",e);
+            }
+        }
+        private BinaryInput[] in;
+        private static final long serialVersionUID=99448845123546345l;
+    }
+    private static class EOF extends HardcodedFunction {
+        public EOF(FileChannel[] fc) {
+            channel=fc;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            try {
+                int file=0;
+                if(args!=ConsCell.nullInstance())
+                    file=(int)((SchemeValue)args.car().eval(env)).numericValue();
+                return SchemeBoolean.create(channel[file].position()<=channel[file].size()-1);
+            } catch(IOException e) {
+                throw new SchemeException("Error checking available.",e);
+            }
+        }
+        private FileChannel[] channel;
+        private static final long serialVersionUID=27546723232334778l;
+    }
+    private static class SetColor extends HardcodedFunction {
+        public SetColor(Graphics2D gr) {
+            g=gr;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            float red,green,blue,alpha=1.0f;
+            red=(float)((SchemeValue)args.car().eval(env)).numericValue();
+            green=(float)((SchemeValue)args.cdr().car().eval(env)).numericValue();
+            blue=(float)((SchemeValue)args.cdr().cdr().car().eval(env)).numericValue();
+            if(args.cdr().cdr().cdr()!=ConsCell.nullInstance())
+                alpha=(float)((SchemeValue)args.cdr().cdr().cdr().car().eval(env)).numericValue();
+            g.setPaint(new Color(red,green,blue,alpha));
+            return ConsCell.nullInstance();
+        }
+        private Graphics2D g;
+        private static final long serialVersionUID=234324903298343645l;
+    }
+    private static class SetStrokeWidth extends HardcodedFunction {
+        public SetStrokeWidth(Graphics2D gr) {
+            g=gr;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            float width;
+            width=(float)((SchemeValue)args.car().eval(env)).numericValue();
+            g.setStroke(new BasicStroke(width));
+            return ConsCell.nullInstance();
+        }
+        private Graphics2D g;
+        private static final long serialVersionUID=845393438468734837l;
+    }
+    private static class FillPoly extends HardcodedFunction {
+        public FillPoly(Graphics2D gr,PlotTransform t) {
+            g=gr;
+            trans=t;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            GeneralPath gp=new GeneralPath();
+            Point2D p=trans.transform(getXFromList(args.car().eval(env),env),getYFromList(args.car().eval(env),env));
+            gp.moveTo((float)p.getX(),(float)p.getY());
+            for(SchemeElement rover=args.cdr(); rover!=ConsCell.nullInstance(); rover=rover.cdr()) {
+                p=trans.transform(getXFromList(rover.car().eval(env),env),getYFromList(rover.car().eval(env),env));                
+                gp.lineTo((float)p.getX(),(float)p.getY());
+            }
+            gp.closePath();
+            g.fill(new Area(gp));
+            return ConsCell.nullInstance();
+        }
+        private Graphics2D g;
+        private PlotTransform trans;
+        private static final long serialVersionUID=774536763445834l;
+    }
+    private static class FillPolyList extends HardcodedFunction {
+        public FillPolyList(Graphics2D gr,PlotTransform t) {
+            g=gr;
+            trans=t;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            GeneralPath gp=new GeneralPath();
+            args=(ConsCell)args.car().eval(env);
+            Point2D p=trans.transform(getXFromList(args.car(),env),getYFromList(args.car(),env));
+            gp.moveTo((float)p.getX(),(float)p.getY());
+            for(SchemeElement rover=args.cdr(); rover!=ConsCell.nullInstance(); rover=rover.cdr()) {
+                p=trans.transform(getXFromList(rover.car(),env),getYFromList(rover.car(),env));                
+                gp.lineTo((float)p.getX(),(float)p.getY());
+            }
+            gp.closePath();
+            g.fill(new Area(gp));
+            return ConsCell.nullInstance();
+        }
+        private Graphics2D g;
+        private PlotTransform trans;
+        private static final long serialVersionUID=774536763445834l;
+    }
+    
+    private static class DrawPoly extends HardcodedFunction {
+        public DrawPoly(Graphics2D gr,PlotTransform t) {
+            g=gr;
+            trans=t;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            GeneralPath gp=new GeneralPath();
+            Point2D p=trans.transform(getXFromList(args.car().eval(env),env),getYFromList(args.car().eval(env),env));
+            gp.moveTo((float)p.getX(),(float)p.getY());
+            for(SchemeElement rover=args.cdr(); rover!=ConsCell.nullInstance(); rover=rover.cdr()) {
+                p=trans.transform(getXFromList(rover.car().eval(env),env),getYFromList(rover.car().eval(env),env));                
+                gp.lineTo((float)p.getX(),(float)p.getY());
+            }
+            gp.closePath();
+            g.draw(gp);
+            return ConsCell.nullInstance();
+        }
+        private Graphics2D g;
+        private PlotTransform trans;
+        private static final long serialVersionUID=8982370923742357l;
+    }
+
+    private static class DrawPolyList extends HardcodedFunction {
+        public DrawPolyList(Graphics2D gr,PlotTransform t) {
+            g=gr;
+            trans=t;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            GeneralPath gp=new GeneralPath();
+            args=(ConsCell)args.car().eval(env);
+            Point2D p=trans.transform(getXFromList(args.car(),env),getYFromList(args.car(),env));
+            gp.moveTo((float)p.getX(),(float)p.getY());
+            for(SchemeElement rover=args.cdr(); rover!=ConsCell.nullInstance(); rover=rover.cdr()) {
+                p=trans.transform(getXFromList(rover.car(),env),getYFromList(rover.car(),env));                
+                gp.lineTo((float)p.getX(),(float)p.getY());
+            }
+            gp.closePath();
+            g.draw(gp);
+            return ConsCell.nullInstance();
+        }
+        private Graphics2D g;
+        private PlotTransform trans;
+        private static final long serialVersionUID=8982370923742357l;
+    }
+    private static class DrawLine extends HardcodedFunction {
+        public DrawLine(Graphics2D gr,PlotTransform t) {
+            g=gr;
+            trans=t;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            SchemeElement sp1=args.car().eval(env);
+            SchemeElement sp2=args.cdr().car().eval(env);
+            Point2D p1=trans.transform(getXFromList(sp1,env),getYFromList(sp1,env));
+            Point2D p2=trans.transform(getXFromList(sp2,env),getYFromList(sp2,env));
+            g.draw(new Line2D.Double(p1,p2));
+            return ConsCell.nullInstance();
+        }
+        private Graphics2D g;
+        private PlotTransform trans;
+        private static final long serialVersionUID=235276562357389l;
+    }
+    private static class FillEllipse extends HardcodedFunction {
+        public FillEllipse(Graphics2D gr,PlotTransform t) {
+            g=gr;
+            trans=t;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            float x=getXFromList(args.car().eval(env),env);
+            float y=getYFromList(args.car().eval(env),env);
+            double w=trans.scaledPrimary(((SchemeValue)args.cdr().car().eval(env)).numericValue());
+            double h=trans.scaledSecondary(((SchemeValue)args.cdr().cdr().car().eval(env)).numericValue());
+            Point2D p=trans.transform(x-0.5f*w,y-0.5f*h);
+            g.fill(new Ellipse2D.Double(p.getX(),p.getY(),w,h));
+            return ConsCell.nullInstance();
+        }
+        private Graphics2D g;
+        private PlotTransform trans;
+        private static final long serialVersionUID=232374211344l;
+    }
+    private static class DrawEllipse extends HardcodedFunction {
+        public DrawEllipse(Graphics2D gr,PlotTransform t) {
+            g=gr;
+            trans=t;
+        }
+        @Override
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            float x=getXFromList(args.car().eval(env),env);
+            float y=getYFromList(args.car().eval(env),env);
+            double w=trans.scaledPrimary(((SchemeValue)args.cdr().car().eval(env)).numericValue());
+            double h=trans.scaledSecondary(((SchemeValue)args.cdr().cdr().car().eval(env)).numericValue());
+            Point2D p=trans.transform(x-0.5f*w,y-0.5f*h);
+            g.draw(new Ellipse2D.Double(p.getX(),p.getY(),w,h));
+            return ConsCell.nullInstance();
+        }
+        private Graphics2D g;
+        private PlotTransform trans;
+        private static final long serialVersionUID=232374211344l;
+    }
+}

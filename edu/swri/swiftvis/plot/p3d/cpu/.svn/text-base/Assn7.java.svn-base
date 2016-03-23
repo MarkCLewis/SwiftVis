@@ -1,0 +1,147 @@
+package edu.swri.swiftvis.plot.p3d.cpu;
+
+// Assn7.java
+// This is an applet to demonstrate assignment #6.
+
+import java.applet.Applet;
+import java.awt.Color;
+import java.awt.Event;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+
+public class Assn7 extends Applet implements Runnable {
+	/**
+     * 
+     */
+    private static final long serialVersionUID = -8224816864017246417L;
+    public void init() {
+		JGPolygon poly;
+		JGTranslate trans=new JGTranslate(0,0,2.5);
+
+		view=new JGView(new JGVector(0,0,0,1),new JGVector(0,0,1,1),new JGVector(0,1,0,1));
+
+		view.setWindow(-1.0,-1.0,1.0,1.0);
+
+		view.setProjection(1,0.0,0.0,-2.0);
+
+		view.setFrontAndBackClippingDistance(0.0,10.0);
+
+		ang=0.0;
+		r1=new JGRotate(0,1,0,ang);
+
+		poly=new JGPolygon(3,true,Color.green);
+		poly.setPoint(0,0,1,0.0);
+		poly.setPoint(1,-1,-1,0.0);
+		poly.setPoint(2,1,-1,0.0);
+		r1.addChild(poly);
+
+		poly=new JGPolygon(3,true,Color.blue);
+		poly.setPoint(0,0,1,0.0);
+		poly.setPoint(1,1,-1,0.0);
+		poly.setPoint(2,-1,-1,0.0);
+		r1.addChild(poly);
+
+		trans.addChild(r1);
+		view.addChild(trans);
+
+		poly=new JGPolygon(4,true,Color.red);
+		poly.setPoint(0,2,2,3);
+		poly.setPoint(1,-2,2,3);
+		poly.setPoint(2,-2,-2,3);
+		poly.setPoint(3,2,-2,3);
+
+		r2=new JGRotate(0,0,1,ang);
+		r2.addChild(poly);
+		view.addChild(r2);
+
+//		view.Add(JGStandardGeoms.Cube(1,Color.blue));
+
+		picture=new BufferedImage(480,480,BufferedImage.TYPE_INT_ARGB);
+
+		requestFocus();
+	}
+
+	public void paint(Graphics g) {
+		Graphics2D picg=picture.createGraphics();
+
+		picg.clipRect(0,0,480,480);
+		view.endFrame(picg,null,true);
+		g.drawImage(picture,0,0,null);
+	}
+
+	public void update(Graphics g) {
+		paint(g);
+	}
+
+	public void start() {
+		if(thread==null) {
+			thread=new Thread(this);
+			thread.start();
+		}
+	}
+
+	public void stop() {
+		if(thread!=null) {
+			//thread.stop();
+			thread=null;
+		}
+	}
+
+	public boolean mouseDown(Event evt,int x,int y) {
+		running=true;
+		SetAngles(x,y);
+		//if(evt.metaDown()) dir=-1.0; else dir=1.0;
+
+		return(true);
+	}
+
+	public boolean mouseDrag(Event evt,int x,int y) {
+		if(running) {
+			SetAngles(x,y);
+		}
+
+		return(true);
+	}
+
+	public boolean mouseUp(Event evt,int x,int y) {
+		running=false;
+
+		return(true);
+	}
+
+	private void SetAngles(int x,int y) {
+		//udang=(y-240)/2400.0;
+		//rlang=(240-x)/2400.0;
+	}
+
+	public void run() {
+		try {
+			while(true) {
+//				if(running) {
+//					view.MoveForward(dir*0.1);
+//					view.TurnLeftRight(dir*rlang);
+//					view.TurnUpDown(dir*udang);
+//				}
+				r1.incrementAngle(0.1);
+				r2.incrementAngle(0.2);
+				repaint();
+				Thread.sleep(200);
+			}
+		}
+		catch(InterruptedException e) {
+			System.out.println("Thread interrupted!");
+		}
+	}
+
+	private JGView view;
+	private JGRotate r1,r2;
+	private double ang;
+
+	private BufferedImage picture;
+
+	private Thread thread=null;
+	//private double udang,rlang,dir=1.0;
+	private boolean running=false;
+
+}

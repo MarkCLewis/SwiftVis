@@ -1,0 +1,871 @@
+/*
+ * Created on Oct 17, 2008
+ */
+package edu.swri.swiftvis.filters;
+
+import java.awt.BorderLayout;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JList;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+
+import edu.swri.swiftvis.BooleanFormula;
+import edu.swri.swiftvis.DataElement;
+import edu.swri.swiftvis.DataFormula;
+import edu.swri.swiftvis.DataSink;
+import edu.swri.swiftvis.GraphElement;
+import edu.swri.swiftvis.filters.NonlinearFitFilter.Function;
+import edu.swri.swiftvis.filters.NonlinearFitFilter.NonlinearFitData;
+import edu.swri.swiftvis.util.EditableBoolean;
+import edu.swri.swiftvis.util.EditableDouble;
+import edu.swri.swiftvis.util.EditableInt;
+import edu.swri.swiftvis.util.EditableString;
+import edu.swri.swiftvis.util.Matrix;
+
+/**
+ * This class is intended to provide highly flexible processing in a way that is similar to
+ * box car averaging that is commonly used to reduce noise.  In fact, simple box car averaging
+ * would be the simplest application of this filter.  The filter will run through the data set
+ * taking a window of data and combine the elements in different ways.  It can be a simple
+ * form of combination like an average, or a more complex one like performing a linear or
+ * non-linear fit.
+ * 
+ * The output from the filter can take one of two forms.  The basic operation is that for each
+ * window of data, certain values are written out.  These could be averages or coefficients from
+ * the fits.  The filter can also be told to use groups with a grouping formula.  When this is
+ * done, only a simple element is output for each group and rules are created to specify what
+ * values are output for each group.  Having things like fitting multiple peaks or the like
+ * will be challenging.
+ * 
+ * The user provides the x and y formulas for the processing.  The filter will find average, min, max,
+ * std, etc. as well as a fit (linear or non-linear) and pass variables along to the combine style that is
+ * selected.
+ * 
+ * @author Mark Lewis
+ */
+public class BoxCarFilter extends AbstractMultipleSourceFilter {
+    public BoxCarFilter() {}
+    
+    public BoxCarFilter(BoxCarFilter c,List<GraphElement> l) {
+        super(c,l);
+        groupMatchFormula=new DataFormula(c.groupMatchFormula);
+        xFormula=new DataFormula(c.xFormula);
+        yFormula=new DataFormula(c.yFormula);
+        fitFormula=new DataFormula(c.fitFormula);
+        fitStyle=c.fitStyle;
+        for(CombineStyle cs:c.combineStyles) {
+            combineStyles.add(cs.copy());
+        }
+    }
+    
+    @Override
+    protected boolean doingInThreads() {
+        return false;
+    }
+
+    @Override
+    protected void redoAllElements() {
+        initParamsAndValues();
+        sizeDataVectToInputStreams();
+        for(int s=0; s<getSource(0).getNumStreams(); ++s) {
+            int[] range=groupMatchFormula.getSafeElementRange(this,s);
+            DataFormula.mergeSafeElementRanges(range,xFormula.getSafeElementRange(this,s));
+            DataFormula.mergeSafeElementRanges(range,yFormula.getSafeElementRange(this,s));
+            DataFormula.checkRangeSafety(range,this);
+            double[] initVals=new double[nonlinearInitialValues.size()];
+            for(int i=0; i<initVals.length; ++i) {
+                initVals[i]=nonlinearInitialValues.get(i).getValue();
+            }
+            int i=range[0];
+            HashMap<String,Double> vars=new HashMap<String,Double>();
+            while(i<range[1]) {
+                double groupValue=groupMatchFormula.valueOf(this,s,i);
+                int i2=i+boxCarSize.getValue();
+                while(i2<=range[1] && groupMatchFormula.valueOf(this,s,i2-1)==groupValue) {
+                    vars.clear();
+                    fitStyles[fitStyle].doFit(xFormula,yFormula,fitFormula,this,s,i,i2,vars,initVals);
+                    for(CombineStyle cs:combineStyles) cs.addData(vars,this,s,i);
+                    if(!outputPerGroup.getValue()) {
+                        ParamValue pv=new ParamValue(new int[0],new float[0]);
+                        for(CombineStyle cs:combineStyles) {
+                            pv=new ParamValue(pv,cs.getData());
+                        }
+                        dataVect.get(s).add(new DataElement(pv.params,pv.values));                        
+                    }
+                    i++;
+                    i2=i+boxCarSize.getValue();
+                }
+                if(outputPerGroup.getValue()) {
+                    ParamValue pv=new ParamValue(new int[0],new float[0]);
+                    for(CombineStyle cs:combineStyles) {
+                        pv=new ParamValue(pv,cs.getData());
+                    }
+                    dataVect.get(s).add(new DataElement(pv.params,pv.values));                        
+                }
+                i=i2;
+            }
+        }
+    }
+
+    @Override
+    protected void setupSpecificPanelProperties() {
+        JPanel panel=new JPanel(new BorderLayout());
+        JPanel northPanel=new JPanel(new GridLayout(8,1));
+        northPanel.add(groupMatchFormula.getLabeledTextField("Group Formula",null));
+        northPanel.add(xFormula.getLabeledTextField("x Formula",null));
+        northPanel.add(yFormula.getLabeledTextField("y Formula",null));
+        northPanel.add(boxCarSize.getLabeledTextField("Box Car Size",null));
+        northPanel.add(outputPerGroup.getCheckBox("One Output Per Group?",null));
+        final JComboBox comboBox=new JComboBox(fitStyles);
+        comboBox.setSelectedIndex(fitStyle);
+        comboBox.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                fitStyle=comboBox.getSelectedIndex();
+            }
+        });
+        northPanel.add(comboBox);
+        northPanel.add(fitFormula.getLabeledTextField("Fit Formula",null));
+        JPanel buttonPanel=new JPanel(new GridLayout(1,2));
+        final JList combineList=new JList(combineStyles.toArray());
+        JButton button=new JButton("Add");
+        button.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                int option=JOptionPane.showOptionDialog(propPanel,
+                        "What type of combine style do you want to add?","Select Type", JOptionPane.OK_CANCEL_OPTION,
+                        JOptionPane.QUESTION_MESSAGE, null, combineStyleCreators, combineStyleCreators[0]);
+                if(option>=0) {
+                    combineStyles.add(combineStyleCreators[option].create());
+                    combineList.setListData(combineStyles.toArray());
+                }
+            }
+        });
+        buttonPanel.add(button);
+        button=new JButton("Remove");
+        button.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                int index=combineList.getSelectedIndex();
+                if(index>=0) {
+                    combineStyles.remove(index);
+                    combineList.setListData(combineStyles.toArray());
+                }
+            }
+        });
+        buttonPanel.add(button);
+        northPanel.add(buttonPanel);
+        panel.add(northPanel,BorderLayout.NORTH);
+        
+        JPanel centerPanel=new JPanel(new GridLayout(2,1));
+        combineList.addListSelectionListener(new ListSelectionListener() {
+            public void valueChanged(ListSelectionEvent e) {
+                combinePropertiesPanel.removeAll();
+                int index=combineList.getSelectedIndex();
+                if(index>=0) {
+                    combinePropertiesPanel.add(combineStyles.get(index).getPropertiesPanel());
+                }
+                combinePropertiesPanel.validate();
+                combinePropertiesPanel.repaint();
+            }
+        });
+        centerPanel.add(new JScrollPane(combineList));
+        combinePropertiesPanel=new JPanel(new BorderLayout());
+        centerPanel.add(new JScrollPane(combinePropertiesPanel));
+        panel.add(centerPanel,BorderLayout.CENTER);
+        
+        button=new JButton("Propagate Changes");
+        button.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                abstractRedoAllElements();
+            }
+        });
+        panel.add(button,BorderLayout.SOUTH);
+        propPanel.addTab("Settings",panel);
+        
+        panel=new JPanel(new BorderLayout());
+        panel.add(nonlinearMaxIters.getLabeledTextField("Max Iterations",null));
+        // TODO
+        propPanel.addTab("Nonlinear Fit Options",panel);
+    }
+
+    public String getParameterDescription(int stream, int which) {
+        if(paramDesc==null) initParamsAndValues();
+        return paramDesc[which];
+    }
+
+    public String getValueDescription(int stream, int which) {
+        if(valueDesc==null) initParamsAndValues();
+        return valueDesc[which];
+    }
+
+    public GraphElement copy(List<GraphElement> l) {
+        return new BoxCarFilter(this,l);
+    }
+
+    public String getDescription() {
+        return "Box Car Filter";
+    }
+    
+    public static String getTypeDescription() {
+        return "Box Car Filter";
+    }
+    
+    private void initParamsAndValues() {
+        int numParams=0;
+        int numValues=0;
+        for(CombineStyle cs:combineStyles) {
+            numParams+=cs.numParams();
+            numValues+=cs.numValues();
+        }
+        paramDesc=new String[numParams];
+        valueDesc=new String[numValues];
+        int pcnt=0;
+        int vcnt=0;
+        for(CombineStyle cs:combineStyles) {
+            for(int i=0; i<cs.numParams(); ++i) {
+                paramDesc[pcnt]=cs.getParamName(i);
+                pcnt++;
+            }
+            for(int i=0; i<cs.numValues(); ++i) {
+                valueDesc[vcnt]=cs.getValueName(i);
+                vcnt++;
+            }
+        }
+    }
+    
+    private static void baseBinCalc(DataFormula xFormula,DataFormula yFormula,DataSink sink,int stream,int i1,int i2,HashMap<String,Double> vars) {
+        double aveX=0.0;
+        double minX=1e100;
+        double maxX=-1e100;
+        double stdX=0.0;
+        double aveY=0.0;
+        double minY=1e100;
+        double maxY=-1e100;
+        double stdY=0.0;
+        double[] x=new double[i2-i1];
+        double[] y=new double[i2-i1];
+        for(int i=i1; i<i2; ++i) {
+            double ix=xFormula.valueOf(sink,stream,i);
+            double iy=yFormula.valueOf(sink,stream,i);
+            aveX+=ix;
+            aveY+=iy;
+            if(ix<minX) minX=ix;
+            if(ix>maxX) maxX=ix;
+            if(iy<minY) minY=iy;
+            if(iy>maxY) maxY=iy;
+            x[i-i1]=ix;
+            y[i-i1]=iy;
+        }
+        aveX/=(i2-i1);
+        aveY/=(i2-i1);
+        for(int i=0; i<i2-i1; ++i) {
+            stdX+=(x[i]-aveX)*(x[i]-aveX);
+            stdY+=(y[i]-aveY)*(y[i]-aveY);
+        }
+        stdX=Math.sqrt(stdX/(i2-i1));
+        stdY=Math.sqrt(stdY/(i2-i1));
+        vars.put("aveX", aveX);
+        vars.put("minX", minX);
+        vars.put("maxX", maxX);
+        vars.put("stdX", stdX);
+        vars.put("aveY", aveY);
+        vars.put("minY", minY);
+        vars.put("maxY", maxY);
+        vars.put("stdY", stdY);
+    }
+    
+    private DataFormula groupMatchFormula=new DataFormula("v[0]");
+    private DataFormula xFormula=new DataFormula("v[1]");
+    private DataFormula yFormula=new DataFormula("v[2]");
+    private EditableInt boxCarSize=new EditableInt(30);
+    private EditableBoolean outputPerGroup=new EditableBoolean(true);
+    private DataFormula fitFormula=new DataFormula("A*x*x+B*x+C");
+    private int fitStyle=0; 
+    private List<CombineStyle> combineStyles=new ArrayList<CombineStyle>();
+    
+    private EditableInt nonlinearMaxIters=new EditableInt(100);
+    private List<EditableDouble> nonlinearInitialValues=new ArrayList<EditableDouble>();
+    
+    private transient JPanel combinePropertiesPanel;
+    private transient String[] paramDesc;
+    private transient String[] valueDesc;
+    private transient String[] varNames;
+    private transient JTable initValTable;
+    
+    private static FitStyle[] fitStyles={new NoFitStyle(),new LinearFitStyle(),new NonlinearFitStyle()};
+    private static CombineStyleCreator[] combineStyleCreators={new BasicCombineCreator(),
+        new AverageCombineCreator(),new MaxCombineCreator(),new SignSwitchCombineCreator()};
+    
+    private static interface FitStyle {
+        void doFit(DataFormula xFormula,DataFormula yFormula,DataFormula fitFormula,DataSink sink,int stream,int i1,int i2,HashMap<String,Double> vars,Object extraData);
+    }
+    
+    private static class NoFitStyle implements FitStyle {
+        public String toString() {
+            return "No Fit";
+        }
+        public void doFit(DataFormula xFormula,DataFormula yFormula,DataFormula fitFormula,DataSink sink,int stream,int i1,int i2,HashMap<String,Double> vars,Object extraData) {
+            baseBinCalc(xFormula,yFormula,sink,stream,i1,i2,vars);
+        }
+    }
+    
+    private static class LinearFitStyle implements FitStyle {
+        public String toString() {
+            return "Linear Fit";
+        }
+        public void doFit(DataFormula xFormula,DataFormula yFormula,DataFormula fitFormula,DataSink sink,int stream,int i1,int i2,HashMap<String,Double> vars,Object extraData) {
+            List<String> varNames=new ArrayList<String>(fitFormula.listVariables());
+            while(varNames.contains("x")) {
+                varNames.remove("x");
+            }
+            double[][] a=new double[varNames.size()][varNames.size()];
+            double[] b=new double[varNames.size()];
+            for(int i=i1; i<i2; ++i) {
+                double[] ti=new double[varNames.size()];
+                for(String s:varNames) vars.put(s,0.0);
+                double x=xFormula.valueOf(sink,stream,i);
+                vars.put("x",x);
+                for(int j=0; j<ti.length; ++j) {
+                    vars.put(varNames.get(j),1.0);
+                    ti[j]=fitFormula.valueOf(sink,stream,i,null,vars);
+                    vars.put(varNames.get(j),0.0);
+                }
+                double y=yFormula.valueOf(sink,stream,i);
+                for(int j=0; j<a.length; ++j) {
+                    for(int k=0; k<a[j].length; ++k) {
+                        a[j][k]+=ti[j]*ti[k];
+                    }
+                    b[j]+=ti[j]*y;
+                }
+            }
+            
+            baseBinCalc(xFormula,yFormula,sink,stream,i1,i2,vars);
+            int[] p=LinearFitFilter.LUPDecompose(a);
+            double[] x=LinearFitFilter.LUPSolve(a,p,b);
+            for(int i=0; i<x.length; ++i) {
+                vars.put(varNames.get(i),x[i]);
+            }
+        }
+    }
+    
+    private static class NonlinearFitStyle implements FitStyle {
+        public String toString() {
+            return "Nonlinear Fit";
+        }
+        public void doFit(DataFormula xFormula,DataFormula yFormula,DataFormula fitFormula,DataSink sink,int stream,int i1,int i2,HashMap<String,Double> vars,Object extraData) {
+            List<String> varNames=new ArrayList<String>(fitFormula.listVariables());
+            while(varNames.contains("x")) {
+                varNames.remove("x");
+            }
+            GeneralFitFunction generalFit=new GeneralFitFunction(fitFormula,varNames,(double[])extraData);
+            NonlinearFitData nfd=NonlinearFitFilter.nonLinearFit(xFormula,yFormula,sink,stream,generalFit,100);
+            baseBinCalc(xFormula,yFormula,sink,stream,i1,i2,vars);
+            for(int i=0; i<nfd.getParams().rows(); ++i) {
+                vars.put(varNames.get(i),nfd.getParams().get(i,0));
+            }
+        }        
+    }
+    
+    public static class GeneralFitFunction implements Function {
+        public GeneralFitFunction(DataFormula ff,List<String> variables,double[] iv) {
+            fitFormula=ff;
+            vars=variables;
+            initialVals=iv;
+        }
+        
+        public Matrix createMatrix() {
+            return new Matrix(vars.size(),1);
+        }
+
+        public double eval(double x, Matrix p,DataSink sink,int stream) {
+            if(hash==null) {
+                hash=new HashMap<String,Double>();
+            }
+            hash.put("x",x);
+            for(int i=0; i<p.rows(); ++i) {
+                hash.put(vars.get(i),p.get(i,0));
+            }
+            return fitFormula.valueOf(sink,stream,0,null, hash);
+        }
+
+        public String getFitDescription(Matrix p) {
+            String ret="";
+            for(int i=0; i<p.rows(); ++i) {
+                ret+=Character.toString((char)('A'+i))+"="+p.get(i,0)+" ";
+            }
+            return ret;
+        }
+
+        public JComponent getPropertiesPanel() {
+            return null;
+        }
+
+        public void initialGuess(Matrix p, int start, int end,DataFormula xFormula,DataFormula yFormula,DataSink sink,int stream) {
+            for(int i=0; i<vars.size(); ++i) {
+                p.set(i,0,initialVals[i]);
+            }
+        }
+        
+        private DataFormula fitFormula=new DataFormula("A+x**B");
+        private List<String> vars=new ArrayList<String>();
+        private double[] initialVals;
+        private transient HashMap<String,Double> hash;
+        private static final long serialVersionUID = 2100061166510689021L;
+    }
+
+    private static class ParamValue {
+        public ParamValue(int[] p,float[] v) {
+            params=p;
+            values=v;
+        }
+        public ParamValue(ParamValue pv,int[] p,float[] v) {
+            params=Arrays.copyOf(pv.params,pv.params.length+p.length);
+            for(int i=0; i<p.length; ++i) params[i+pv.params.length]=p[i];
+            values=Arrays.copyOf(pv.values,pv.values.length+v.length);
+            for(int i=0; i<v.length; ++i) values[i+pv.values.length]=v[i];
+        }
+        public ParamValue(ParamValue pv1,ParamValue pv2) {
+            params=Arrays.copyOf(pv1.params,pv1.params.length+pv2.params.length);
+            for(int i=0; i<pv2.params.length; ++i) params[i+pv1.params.length]=pv2.params[i];
+            values=Arrays.copyOf(pv1.values,pv1.values.length+pv2.values.length);
+            for(int i=0; i<pv2.values.length; ++i) values[i+pv1.values.length]=pv2.values[i];
+        }
+        private int[] params;
+        private float[] values;
+    }
+    
+    /**
+     * This interface keeps track of things between outputs.  It will compound things
+     * if that is what is desire.  One type of this can do the one-per-group type of
+     * output with a boolean.  Another one compounds things until something is tripped.
+     * @author Mark Lewis
+     */
+    private static interface CombineStyle extends Serializable {
+        int numParams();
+        int numValues();
+        void addData(HashMap<String,Double> vars,DataSink sink,int stream,int elem);
+        ParamValue getData();
+        JComponent getPropertiesPanel();
+        CombineStyle copy();
+        String getParamName(int i);
+        String getValueName(int i);
+    }
+    
+    private static interface CombineStyleCreator {
+        CombineStyle create();
+    }
+    
+    private static class BasicCombineStyle implements CombineStyle {
+        public String toString() {
+            return "Basic "+name.getValue()+":"+formula.getFormula();
+        }
+        public int numParams() {
+            return (asParam.getValue())?1:0;
+        }
+        public int numValues() {
+            return (asParam.getValue())?0:1;            
+        }
+        public void addData(HashMap<String,Double> vars,DataSink sink,int stream,int elem) {
+            if(!accept.valueOf(null,0,0,null, vars)) return;
+            float val=(float)formula.valueOf(sink,stream,elem,null, vars);
+            if(asParam.getValue()) {
+                element=new ParamValue(new int[]{(int)val},new float[0]);
+            } else {
+                element=new ParamValue(new int[0],new float[]{val});
+            }
+        }
+        public ParamValue getData() {
+            return element;
+        }
+        public JComponent getPropertiesPanel() {
+            if(propPanel==null) {
+                propPanel=new JPanel(new BorderLayout());
+                JPanel northPanel=new JPanel(new GridLayout(4,1));
+                northPanel.add(name.getLabeledTextField("Name",null));
+                northPanel.add(formula.getLabeledTextField("Formula",null));
+                northPanel.add(accept.getLabeledTextField("Condition",null));
+                northPanel.add(asParam.getCheckBox("Output as parameter",null));
+                propPanel.add(northPanel,BorderLayout.NORTH);
+            }
+            return propPanel;
+        }
+        public CombineStyle copy() {
+            BasicCombineStyle ret=new BasicCombineStyle();
+            ret.name.setValue(name.getValue());
+            ret.asParam.setValue(asParam.getValue());
+            ret.formula.setFormula(formula.getFormula());
+            ret.accept.setFormula(accept.getFormula());
+            return ret;
+        }
+        public String getParamName(int i) {
+            return name.getValue();
+        }
+        public String getValueName(int i) {
+            return name.getValue();            
+        }
+
+        private EditableString name=new EditableString("Unspecified");
+        private EditableBoolean asParam=new EditableBoolean(false);
+        private DataFormula formula=new DataFormula("aveY");
+        private BooleanFormula accept=new BooleanFormula("1=1");
+        
+        private transient JPanel propPanel;
+        private transient ParamValue element=null;
+        private static final long serialVersionUID = 655137221337193583L;
+    }
+    
+    private static class BasicCombineCreator implements CombineStyleCreator {
+        public String toString() {
+            return "Basic";
+        }
+        public CombineStyle create() {
+            return new BasicCombineStyle();
+        }
+    }
+    
+    private static class AverageCombineStyle implements CombineStyle {
+        public String toString() {
+            return "Average "+name.getValue()+":"+formula.getFormula();
+        }
+        public int numParams() {
+            return (asParam.getValue())?1:0;
+        }
+        public int numValues() {
+            return (asParam.getValue())?0:1;            
+        }
+        public void addData(HashMap<String,Double> vars,DataSink sink,int stream,int elem) {
+            if(!accept.valueOf(null,0,0,null, vars)) return;
+            float val=(float)formula.valueOf(sink,stream,elem,null, vars);
+            sum+=val;
+            cnt++;
+        }
+        public ParamValue getData() {
+            float val=(float)(sum/cnt);
+            ParamValue ret;
+            if(asParam.getValue()) {
+                ret=new ParamValue(new int[]{(int)val},new float[]{});
+            } else {
+                ret=new ParamValue(new int[]{},new float[]{val});
+            }
+            sum=0.0;
+            cnt=0.0;
+            return ret;
+        }
+        public JComponent getPropertiesPanel() {
+            if(propPanel==null) {
+                propPanel=new JPanel(new BorderLayout());
+                JPanel northPanel=new JPanel(new GridLayout(4,1));
+                northPanel.add(name.getLabeledTextField("Name",null));
+                northPanel.add(formula.getLabeledTextField("Formula",null));
+                northPanel.add(accept.getLabeledTextField("Condition",null));
+                northPanel.add(asParam.getCheckBox("Output as parameter",null));
+                propPanel.add(northPanel,BorderLayout.NORTH);
+            }
+            return propPanel;
+        }
+        public CombineStyle copy() {
+            AverageCombineStyle ret=new AverageCombineStyle();
+            ret.name.setValue(name.getValue());
+            ret.asParam.setValue(asParam.getValue());
+            ret.formula.setFormula(formula.getFormula());
+            ret.accept.setFormula(accept.getFormula());
+            return ret;
+        }
+        public String getParamName(int i) {
+            return name.getValue();
+        }
+        public String getValueName(int i) {
+            return name.getValue();            
+        }
+        
+        private EditableString name=new EditableString("Unspecified");        
+        private EditableBoolean asParam=new EditableBoolean(false);
+        private DataFormula formula=new DataFormula("aveY");
+        private BooleanFormula accept=new BooleanFormula("1=1");
+        
+        private transient JPanel propPanel;
+        private transient double sum,cnt;
+        private static final long serialVersionUID = 261712815132087912L;
+    }
+    
+    private static class AverageCombineCreator implements CombineStyleCreator {
+        public String toString() {
+            return "Average";
+        }
+        public CombineStyle create() {
+            return new AverageCombineStyle();
+        }
+    }
+    
+    private static class MaxCombineStyle implements CombineStyle {
+        public String toString() {
+            return "Maximum "+name.getValue()+":"+maxFormula.getFormula()+" : "+valueFormula.getFormula();
+        }
+        public int numParams() {
+            return (asParam.getValue())?1:0;
+        }
+        public int numValues() {
+            return (asParam.getValue())?0:1;            
+        }
+        public void addData(HashMap<String,Double> vars,DataSink sink,int stream,int elem) {
+            if(!accept.valueOf(null,0,0,null, vars)) return;
+            double val=maxFormula.valueOf(sink,stream,elem,null, vars);
+            if(val>max) {
+                max=val;
+                value=valueFormula.valueOf(sink,stream,elem,null, vars);
+            }
+        }
+        public ParamValue getData() {
+            float val=(float)value;
+            ParamValue ret;
+            if(asParam.getValue()) {
+                ret=new ParamValue(new int[]{(int)val},new float[]{});
+            } else {
+                ret=new ParamValue(new int[]{},new float[]{val});
+            }
+            max=-1e100;
+            value=0.0;
+            return ret;
+        }
+        public JComponent getPropertiesPanel() {
+            if(propPanel==null) {
+                propPanel=new JPanel(new BorderLayout());
+                JPanel northPanel=new JPanel(new GridLayout(5,1));
+                northPanel.add(name.getLabeledTextField("Name",null));
+                northPanel.add(maxFormula.getLabeledTextField("Max Formula",null));
+                northPanel.add(valueFormula.getLabeledTextField("Value Formula",null));
+                northPanel.add(accept.getLabeledTextField("Condition",null));
+                northPanel.add(asParam.getCheckBox("Output as parameter",null));
+                propPanel.add(northPanel,BorderLayout.NORTH);
+            }
+            return propPanel;
+        }
+        public CombineStyle copy() {
+            AverageCombineStyle ret=new AverageCombineStyle();
+            ret.name.setValue(name.getValue());
+            ret.asParam.setValue(asParam.getValue());
+            ret.formula.setFormula(maxFormula.getFormula());
+            ret.formula.setFormula(valueFormula.getFormula());
+            ret.accept.setFormula(accept.getFormula());
+            return ret;
+        }
+        public String getParamName(int i) {
+            return name.getValue();
+        }
+        public String getValueName(int i) {
+            return name.getValue();            
+        }
+        
+        private EditableString name=new EditableString("Unspecified");        
+        private EditableBoolean asParam=new EditableBoolean(false);
+        private DataFormula maxFormula=new DataFormula("aveY");        
+        private DataFormula valueFormula=new DataFormula("aveY");        
+        private BooleanFormula accept=new BooleanFormula("1=1");
+        
+        private transient JPanel propPanel;
+        private transient double max=-1e100,value=0.0;
+        private static final long serialVersionUID = 261712815132087912L;
+    }
+    
+    private static class MaxCombineCreator implements CombineStyleCreator {
+        public String toString() {
+            return "Maximum";
+        }
+        public CombineStyle create() {
+            return new MaxCombineStyle();
+        }
+    }
+    
+    private static class SignSwitchCombineStyle implements CombineStyle {
+        public String toString() {
+            return "Sign Switch "+name.getValue()+":"+signFormula.getFormula()+" : "+value1Formula.getFormula()+" : "+value2Formula.getFormula();
+        }
+        public int numParams() {
+            return 1;
+        }
+        public int numValues() {
+            return maxToMake.getValue();            
+        }
+        public void addData(HashMap<String,Double> vars,DataSink sink,int stream,int elem) {
+            if(info==null) {
+                info=boxCombineStyles[boxCombineStyle].reset();                
+            }
+            if(values==null) {
+                values=new float[maxToMake.getValue()];                
+            }
+            if(!accept.valueOf(null,0,0,null, vars)) return;
+            double sign=signFormula.valueOf(sink,stream,elem,null, vars);
+            float val1=(float)value1Formula.valueOf(sink,stream,elem,null, vars);
+            float val2=(float)value2Formula.valueOf(sink,stream,elem,null, vars);
+//            System.out.println(value1Formula.getFormula()+"="+val1);
+//            System.out.println(value2Formula.getFormula()+"="+val2);
+            if(Math.abs(sign)>threshold.getValue()) {
+                if(lastSign*sign<0) {
+                    if(cnt<values.length) values[cnt]=(float)boxCombineStyles[boxCombineStyle].getValue(info);
+                    cnt++;
+                    info=boxCombineStyles[boxCombineStyle].reset();                
+                }
+                lastSign=sign;
+            }
+            boxCombineStyles[boxCombineStyle].addValue(val1,val2,info);
+        }
+        public ParamValue getData() {
+            ParamValue ret=new ParamValue(new int[]{cnt},values);
+            info=boxCombineStyles[boxCombineStyle].reset();
+            lastSign=0;
+            cnt=0;
+            values=new float[maxToMake.getValue()];
+            return ret;
+        }
+        public JComponent getPropertiesPanel() {
+            if(propPanel==null) {
+                propPanel=new JPanel(new BorderLayout());
+                JPanel northPanel=new JPanel(new GridLayout(8,1));
+                northPanel.add(name.getLabeledTextField("Name",null));
+                northPanel.add(signFormula.getLabeledTextField("Sign Formula",null));
+                northPanel.add(value1Formula.getLabeledTextField("Value 1",null));
+                northPanel.add(value2Formula.getLabeledTextField("Value 2",null));
+                northPanel.add(accept.getLabeledTextField("Condition",null));
+                northPanel.add(threshold.getLabeledTextField("Threshold",null));
+                northPanel.add(maxToMake.getLabeledTextField("Max Values",new EditableInt.Listener() {
+                    public void valueChanged() {
+                        values=new float[maxToMake.getValue()];
+                    }
+                }));
+                final JComboBox comboBox=new JComboBox(boxCombineStyles);
+                comboBox.setSelectedIndex(boxCombineStyle);
+                comboBox.addActionListener(new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        boxCombineStyle=comboBox.getSelectedIndex();
+                    }
+                });
+                northPanel.add(comboBox);
+                propPanel.add(northPanel,BorderLayout.NORTH);
+            }
+            return propPanel;
+        }
+        public CombineStyle copy() {
+            SignSwitchCombineStyle ret=new SignSwitchCombineStyle();
+            ret.name.setValue(name.getValue());
+            ret.maxToMake.setValue(maxToMake.getValue());
+            ret.signFormula.setFormula(signFormula.getFormula());
+            ret.value1Formula.setFormula(value1Formula.getFormula());
+            ret.value2Formula.setFormula(value2Formula.getFormula());
+            ret.threshold.setValue(threshold.getValue());
+            ret.accept.setFormula(accept.getFormula());
+            ret.boxCombineStyle=boxCombineStyle;
+            return ret;
+        }
+        public String getParamName(int i) {
+            return name.getValue()+" Count";
+        }
+        public String getValueName(int i) {
+            return name.getValue()+i;            
+        }
+        
+        private EditableString name=new EditableString("Unspecified");        
+        private EditableInt maxToMake=new EditableInt(3);
+        private DataFormula signFormula=new DataFormula("A");
+        private DataFormula value1Formula=new DataFormula("aveY");
+        private DataFormula value2Formula=new DataFormula("aveX");
+        private EditableDouble threshold=new EditableDouble(1e7);
+        private BooleanFormula accept=new BooleanFormula("1=1");
+        private int boxCombineStyle=0;
+        
+        private transient float[] values;
+        private transient JPanel propPanel;
+        private transient int cnt;
+        private transient double[] info;
+        private transient double lastSign=0;
+        private static final long serialVersionUID = -4214163188133509704L;
+    }
+    
+    private static class SignSwitchCombineCreator implements CombineStyleCreator {
+        public String toString() {
+            return "Sign Switch";
+        }
+        public CombineStyle create() {
+            return new SignSwitchCombineStyle();
+        }
+    }
+    
+    private static BoxCombineStyle[] boxCombineStyles={new AverageBoxCombine(),
+        new MinBoxCombine(),new MaxBoxCombine()};
+    
+    private static interface BoxCombineStyle {
+        double[] reset();
+        void addValue(double d,double v,double[] info);
+        double getValue(double[] info);
+    }
+    
+    private static class AverageBoxCombine implements BoxCombineStyle {
+        public String toString() {
+            return "Average (value 1 only)";
+        }
+        public double[] reset() {
+            return new double[2];
+        }
+        public void addValue(double d,double v,double[] info) {
+            info[0]+=d;
+            info[1]++;
+        }
+        public double getValue(double[] info) {
+            return info[0]/info[1];
+        }
+    }
+    
+    private static class MinBoxCombine implements BoxCombineStyle {
+        public String toString() {
+            return "Minimum (of value 1 returns value 2)";
+        }
+        public double[] reset() {
+            double[] ret=new double[2];
+            ret[0]=1e100;
+            return ret;
+        }
+        public void addValue(double d,double v,double[] info) {
+            if(d<info[0]) {
+                d=info[0];
+                info[1]=v;
+            }
+        }
+        public double getValue(double[] info) {
+            return info[1];
+        }
+    }
+    
+    private static class MaxBoxCombine implements BoxCombineStyle {
+        public String toString() {
+            return "Maximum (of value 1 returns value 2)";
+        }
+        public double[] reset() {
+            double[] ret=new double[2];
+            ret[0]=-1e100;
+            return ret;
+        }
+        public void addValue(double d,double v,double[] info) {
+            if(d>info[0]) {
+                info[0]=d;
+                info[1]=v;
+            }
+        }
+        public double getValue(double[] info) {
+            return info[1];
+        }
+    }
+    
+    private static final long serialVersionUID = 4937069140763367522L;
+}

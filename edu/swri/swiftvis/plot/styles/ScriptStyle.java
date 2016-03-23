@@ -1,0 +1,204 @@
+/*
+ * Created on Jun 11, 2007
+ */
+package edu.swri.swiftvis.plot.styles;
+
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.util.List;
+
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineFactory;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JTextArea;
+
+import edu.swri.swiftvis.DataElement;
+import edu.swri.swiftvis.DataSink;
+import edu.swri.swiftvis.DataSource;
+import edu.swri.swiftvis.OptionsData;
+import edu.swri.swiftvis.plot.DataPlotStyle;
+import edu.swri.swiftvis.plot.PlotArea2D;
+import edu.swri.swiftvis.plot.PlotLegend;
+import edu.swri.swiftvis.plot.PlotTransform;
+import edu.swri.swiftvis.scripting.ScriptDrawer;
+import edu.swri.swiftvis.scripting.ScriptUtil;
+import edu.swri.swiftvis.util.EditableString;
+
+public class ScriptStyle implements DataPlotStyle {
+    public ScriptStyle(PlotArea2D pa) {
+        plotArea=pa;
+    }
+
+    private ScriptStyle(ScriptStyle c,PlotArea2D pa) {
+        plotArea=pa;
+        name=new EditableString(c.name.getValue());
+        codeString=c.codeString;
+        language=c.language;
+    }
+    
+    @Override
+    public DataPlotStyle copy(PlotArea2D pa) {
+        return new ScriptStyle(this,pa);
+    }
+
+    @Override
+    public void drawToGraphics(Graphics2D g, PlotTransform trans) {
+        g.setColor(Color.black);
+        runCode(g,trans);
+    }
+
+    @Override
+    public PlotLegend getLegendInformation() {
+        return null;
+    }
+
+    @Override
+    public JComponent getPropertiesPanel() {
+        if(propPanel==null) {
+            propPanel=new JPanel(new BorderLayout());
+            ScriptEngineManager manager=new ScriptEngineManager();
+            List<ScriptEngineFactory> factories=manager.getEngineFactories();
+            String[] languages=new String[factories.size()];
+            int selected=-1;
+            for(int i=0; i<factories.size(); ++i) {
+                ScriptEngineFactory sef=factories.get(i);
+                languages[i]=sef.getLanguageName();
+                if(language.equals(languages[i])) selected=i;
+            }
+            if(selected==-1) {
+                selected=0;
+                language=factories.get(0).getLanguageName();
+            }
+            final JComboBox engineBox=new JComboBox(languages);
+            engineBox.setSelectedIndex(selected);
+            engineBox.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    language=(String)engineBox.getSelectedItem();
+                }
+            });
+            propPanel.add(engineBox,BorderLayout.NORTH);
+
+            final JTextArea codeArea=new JTextArea(codeString);
+            codeArea.addFocusListener(new FocusAdapter() {
+                @Override
+                public void focusLost(FocusEvent e) {
+                    codeString=codeArea.getText();
+                }
+            });
+            propPanel.add(codeArea,BorderLayout.CENTER);
+            
+            JPanel southPanel=new JPanel(new GridLayout(2,1));
+            JButton editorButton=new JButton("Launch External Editor");
+            editorButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    ScriptEngineManager manager=new ScriptEngineManager();
+                    List<ScriptEngineFactory> factories=manager.getEngineFactories();
+                    String ext=".txt";
+                    for(ScriptEngineFactory sef:factories) {
+                        if(sef.getLanguageName().equals(language)) ext=sef.getExtensions().get(0);
+                    }
+                    codeArea.setText(OptionsData.instance().launchEditor(codeArea.getText(),ext));
+                }
+            });
+            southPanel.add(editorButton,BorderLayout.NORTH);
+            JButton button=new JButton("Run Code/Propagate Changes");
+            button.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    codeString=codeArea.getText();
+                    plotArea.forceRedraw();
+                }
+            });
+            southPanel.add(button);
+            propPanel.add(southPanel,BorderLayout.SOUTH);
+        }
+        return propPanel;
+    }
+
+    @Override
+    public void redoBounds() {
+        runCode(null,null);
+    }
+
+    @Override
+    public double[][] getBounds() {
+        if(bounds==null) {
+            if(drawer==null) return new double[][]{{0,1},{0,1}};
+            return drawer.getBounds();
+        }
+        return bounds;
+    }
+
+    public static String getTypeDescription() { return "Script Plot"; }
+    
+    @Override
+    public String toString() {
+        return "Script Plot - "+name.getValue();
+    }
+    
+    private void runCode(Graphics2D g,PlotTransform trans) {
+        drawer=new ScriptDrawer(g,trans);
+        ScriptEngineManager manager=new ScriptEngineManager();
+        ScriptEngine engine=manager.getEngineByName(language);
+        if(engine==null) {
+            JOptionPane.showMessageDialog(propPanel,"Could not find the engine for your script.");
+            return;
+        }
+        DataSink sink=plotArea.getSink();
+        engine.put("drawer",drawer);
+        int[][][] params=new int[sink.getNumSources()][][];
+        float[][][] vals=new float[sink.getNumSources()][][];
+        for(int i=0; i<params.length; ++i) {
+            DataSource ds=sink.getSource(i);
+            params[i]=new int[ds.getNumElements(0)][];
+            vals[i]=new float[ds.getNumElements(0)][];
+            for(int j=0; j<ds.getNumElements(0); ++j) {
+                DataElement de=ds.getElement(j, 0);
+                params[i][j]=new int[de.getNumParams()];
+                vals[i][j]=new float[de.getNumValues()];
+                for(int k=0; k<de.getNumParams(); ++k) {
+                    params[i][j][k]=de.getParam(k);
+                }
+                for(int k=0; k<de.getNumValues(); ++k) {
+                    vals[i][j][k]=de.getValue(k);
+                }
+            }
+        }
+        engine.put("params",params);
+        engine.put("values",vals);
+        try {
+            engine.eval(OptionsData.instance().getScriptBaseCode(language)+codeString);
+            Object outBounds=engine.get("bounds");
+            double[][] tmp=ScriptUtil.objectToDouble2DArray(outBounds);
+            if(tmp!=null && tmp.length==2 && tmp[0].length==2) bounds=tmp;
+        } catch (ScriptException e) {
+            JOptionPane.showMessageDialog(propPanel,"There was an exception running the script.");
+            e.printStackTrace();
+        }        
+    }
+    
+    private PlotArea2D plotArea;
+    private EditableString name=new EditableString("Default");
+    private String codeString="";
+    private String language="ECMAScript";
+    private transient double[][] bounds=null;
+    private transient JPanel propPanel;
+    private transient ScriptDrawer drawer;
+
+    private static final long serialVersionUID = -8195146812424496404L;
+
+}

@@ -1,0 +1,385 @@
+/*
+ * Created on Jun 11, 2005
+ */
+package edu.swri.swiftvis.filters;
+
+
+import java.awt.BorderLayout;
+import java.awt.GridLayout;
+import java.awt.Shape;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.awt.geom.Ellipse2D;
+import java.awt.geom.GeneralPath;
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+
+import edu.swri.swiftvis.DataElement;
+import edu.swri.swiftvis.DataFormula;
+import edu.swri.swiftvis.GraphElement;
+import edu.swri.swiftvis.PlotListener;
+import edu.swri.swiftvis.plot.PlotTransform;
+import edu.swri.swiftvis.util.EditableBoolean;
+import edu.swri.swiftvis.util.EditableDouble;
+import edu.swri.swiftvis.util.ReduceLoopBody;
+import edu.swri.swiftvis.util.ThreadHandler;
+
+/**
+ * This is a filter that takes a single source and selects elements in a certain region.
+ * This filter type implements PlotListener so it takes inputs from the user clicking on
+ * plots or key presses on the plots.  These are used to relocate the the region that is
+ * selected.  The filter uses two formulas and uses the values of those as Cartesian
+ * coordinates for doing selection on rectangular regions.  The clicks can be
+ * set to either relocate the view region, or to resize it.
+ * 
+ * @author Mark Lewis
+ */
+public class SliceSelectionFilter extends AbstractSingleSourceFilter implements PlotListener {
+    public SliceSelectionFilter() {
+    }
+    
+    public SliceSelectionFilter(SliceSelectionFilter c,List<GraphElement> l) {
+        super(c,l);
+        f1=new DataFormula(c.f1);
+        f2=new DataFormula(c.f2);
+        p1=new EditableDouble(c.p1.getValue());
+        s1=new EditableDouble(c.s1.getValue());
+        p2=new EditableDouble(c.p2.getValue());
+        s2=new EditableDouble(c.s2.getValue());
+        cutStyle=c.cutStyle;
+        width=new EditableDouble(c.width.getValue());
+        redoOnDrag=new EditableBoolean(c.redoOnDrag.getValue());
+    }
+    
+    protected boolean doingInThreads() {
+		return true;
+	}
+    
+    @Override
+    protected void redoAllElements() {
+        if(input==null || input.getNumElements(0)==0) return;
+        int[] indexBounds=f1.getSafeElementRange(this, 0);
+        int[] b2=f2.getSafeElementRange(this, 0);
+        if(b2[0]>indexBounds[0]) indexBounds[0]=b2[0];
+        if(b2[1]<indexBounds[1]) indexBounds[1]=b2[1];
+        DataFormula.checkRangeSafety(indexBounds,this);
+        try {
+            f1.valueOf(this,0, indexBounds[0]);
+        } catch(ArrayIndexOutOfBoundsException e) {
+            f1.setFormula("1");
+        }
+        try {
+            f2.valueOf(this,0, indexBounds[0]);
+        } catch(ArrayIndexOutOfBoundsException e) {
+            f2.setFormula("1");
+        }
+        
+        //  parallel
+        final ArrayList<ArrayList<DataElement>> vects=new ArrayList<ArrayList<DataElement>>();
+        for (int i=0; i<ThreadHandler.instance().getNumThreads(); i++) {
+        	vects.add(new ArrayList<DataElement>());
+        }
+        final DataFormula[] f1s=new DataFormula[ThreadHandler.instance().getNumThreads()];
+        final DataFormula[] f2s=new DataFormula[ThreadHandler.instance().getNumThreads()];
+        // create ReduceLoopBody array
+        ReduceLoopBody[] loops=new ReduceLoopBody[vects.size()];
+        for (int i=0; i<loops.length; i++) {
+        	final int index=i;
+        	f1s[i]=f1.getParallelCopy();
+        	f2s[i]=f2.getParallelCopy();
+        	loops[i]=new ReduceLoopBody() {
+        		public void execute(int start, int end) {
+        			DataFormula ff1=f1s[index];
+        			DataFormula ff2=f2s[index];
+        			ArrayList<DataElement> data=vects.get(index);
+        			for (int j=start; j<end; j++) {
+        				double vp=ff1.valueOf(SliceSelectionFilter.this,0,j);
+        	            double vs=ff2.valueOf(SliceSelectionFilter.this,0,j);
+        	            double dist=0.0,offset=0.0;
+        	            switch(cutStyle) {
+        	            case VERTICAL:
+        	                dist=vp-p1.getValue();
+        	                offset=vs;
+        	                break;
+        	            case HORIZONTAL:
+        	                dist=vs-s1.getValue();
+        	                offset=vp;
+        	                break;
+        	            case GENERAL:
+        	                if(p1.getValue()==p2.getValue() && s1.getValue()==s2.getValue()) {
+        	                    double dp=vp-p1.getValue();
+        	                    double ds=vs-s1.getValue();
+        	                    dist=Math.sqrt(dp*dp+ds*ds);
+        	                    offset=Math.atan2(ds,dp);
+        	                } else {
+        	                    double np=-(s2.getValue()-s1.getValue());
+        	                    double ns=p2.getValue()-p1.getValue();
+        	                    double len=Math.sqrt(np*np+ns*ns);
+        	                    np/=len;
+        	                    ns/=len;
+        	                    dist=np*(vp-p1.getValue())+ns*(vs-s1.getValue());
+        	                    double pp=p2.getValue()-p1.getValue();
+        	                    double ps=s2.getValue()-s1.getValue();
+        	                    len=Math.sqrt(pp*pp+ps*ps);
+        	                    pp/=len;
+        	                    np/=len;
+        	                    offset=pp*(vp-p1.getValue())+ps*(vs-s1.getValue());
+        	                    double dp=p2.getValue()-p1.getValue();
+        	                    double ds=s2.getValue()-s1.getValue();
+        	                    if(offset<0 || offset>Math.sqrt(dp*dp+ds*ds)) dist=width.getValue();
+        	                }
+        	                break;
+        	            }
+        	            //System.out.println(i+" "+vp+" "+vs+" "+dist+" "+offset+" "+cutStyle);
+        	            if(Math.abs(dist)<=0.5*width.getValue()) {
+        	                data.add(new DataElement(input.getElement(j, 0),new float[]{(float)dist,(float)offset}));
+        	            }
+        			}
+        		}
+        	};
+        }
+        ThreadHandler.instance().chunkedForLoop(this,indexBounds[0],indexBounds[1],loops);
+        // merge lists
+        int size=0;
+        for (int i=0; i<vects.size(); i++) {
+        	size+=vects.get(i).size();
+        }
+        dataVect.get(0).ensureCapacity(size);
+        for (int i=0; i<vects.size(); i++) {
+        	dataVect.get(0).addAll(vects.get(i));
+        }
+    }
+
+    @Override
+    protected void setupSpecificPanelProperties() {
+        JPanel panel=new JPanel(new BorderLayout());
+        JPanel innerPanel=new JPanel(new GridLayout(12,1));
+        JPanel innerPanel2=new JPanel(new BorderLayout());
+        innerPanel2.add(new JLabel("Primary Formula"),BorderLayout.WEST);
+        innerPanel2.add(f1.getTextField(null),BorderLayout.CENTER);
+        innerPanel.add(innerPanel2);
+        innerPanel2=new JPanel(new BorderLayout());
+        innerPanel2.add(new JLabel("Secondary Formula"),BorderLayout.WEST);
+        innerPanel2.add(f2.getTextField(null),BorderLayout.CENTER);
+        innerPanel.add(innerPanel2);
+        ButtonGroup group=new ButtonGroup();
+        JRadioButton radioButton=new JRadioButton("Vertical Slice");
+        group.add(radioButton);
+        radioButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                cutStyle=CutStyle.VERTICAL;
+                abstractRedoAllElements();
+            }
+        });
+        if(cutStyle==CutStyle.VERTICAL) radioButton.setSelected(true);
+        innerPanel.add(radioButton);
+        radioButton=new JRadioButton("Horizontal Slice");
+        group.add(radioButton);
+        radioButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                cutStyle=CutStyle.HORIZONTAL;
+                abstractRedoAllElements();
+            }
+        });
+        if(cutStyle==CutStyle.HORIZONTAL) radioButton.setSelected(true);
+        innerPanel.add(radioButton);
+        radioButton=new JRadioButton("General Slice");
+        group.add(radioButton);
+        radioButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                cutStyle=CutStyle.GENERAL;
+                abstractRedoAllElements();
+            }
+        });
+        if(cutStyle==CutStyle.GENERAL) radioButton.setSelected(true);
+        innerPanel.add(radioButton);
+        innerPanel2=new JPanel(new BorderLayout());
+        innerPanel2.add(new JLabel("Primary 1"),BorderLayout.WEST);
+        innerPanel2.add(p1.getTextField(null),BorderLayout.CENTER);
+        innerPanel.add(innerPanel2);
+        innerPanel2=new JPanel(new BorderLayout());
+        innerPanel2.add(new JLabel("Secondary 1"),BorderLayout.WEST);
+        innerPanel2.add(s1.getTextField(null),BorderLayout.CENTER);
+        innerPanel.add(innerPanel2);
+        innerPanel2=new JPanel(new BorderLayout());
+        innerPanel2.add(new JLabel("Primary 2"),BorderLayout.WEST);
+        innerPanel2.add(p2.getTextField(null),BorderLayout.CENTER);
+        innerPanel.add(innerPanel2);
+        innerPanel2=new JPanel(new BorderLayout());
+        innerPanel2.add(new JLabel("Secondary 2"),BorderLayout.WEST);
+        innerPanel2.add(s2.getTextField(null),BorderLayout.CENTER);
+        innerPanel.add(innerPanel2);
+        innerPanel2=new JPanel(new BorderLayout());
+        innerPanel2.add(new JLabel("Slice Width"),BorderLayout.WEST);
+        innerPanel2.add(width.getTextField(null),BorderLayout.CENTER);
+        innerPanel.add(innerPanel2);
+        JButton button=new JButton("Apply Slice");
+        button.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                abstractRedoAllElements();
+            }
+        });
+        innerPanel.add(button);
+        innerPanel.add(redoOnDrag.getCheckBox("Redo data on drag?",null));
+        panel.add(innerPanel,BorderLayout.NORTH);
+        innerPanel=new JPanel(new GridLayout(1,2));
+        v1Label=new JLabel("0.0");
+        innerPanel.add(v1Label);
+        v2Label=new JLabel("0.0");
+        innerPanel.add(v2Label);
+        panel.add(innerPanel,BorderLayout.SOUTH);
+        propPanel.add("Region Options",panel);
+    }
+
+    public void mousePressed(double v1, double v2, MouseEvent e) {
+        p1.setValue(v1);
+        s1.setValue(v2);
+        if(cutStyle!=CutStyle.GENERAL) {
+            abstractRedoAllElements();
+        }
+    }
+
+    public void mouseReleased(double v1, double v2, MouseEvent e) {
+        p2.setValue(v1);
+        s2.setValue(v2);
+        if(cutStyle==CutStyle.GENERAL) {
+            abstractRedoAllElements();                
+        }
+    }
+
+    public void mouseClicked(double v1, double v2, MouseEvent e) {
+    }
+
+    public void mouseMoved(double v1, double v2, MouseEvent e) {
+        if(v1Label!=null) {
+            v1Label.setText(Double.toString(v1));
+            v2Label.setText(Double.toString(v2));
+        }
+    }
+
+    public void mouseDragged(double v1, double v2, MouseEvent e) {
+        if(v1Label!=null) {
+            v1Label.setText(Double.toString(v1));
+            v2Label.setText(Double.toString(v2));
+        }
+        if(redoOnDrag.getValue() && cutStyle==CutStyle.GENERAL && (v1!=p1.getValue() && v2!=s1.getValue())) {
+            p2.setValue(v1);
+            s2.setValue(v2);
+            abstractRedoAllElements();
+        }
+    }
+
+    public void keyPressed(KeyEvent e) {
+    }
+
+    public void keyReleased(KeyEvent e) {
+    }
+
+    public void keyTyped(KeyEvent e) {
+    }
+
+    public Shape getSelectionRegion(PlotTransform trans) {
+        Point2D pnt1,pnt2;
+        Rectangle2D ret;
+        switch(cutStyle) {
+        case VERTICAL:
+            pnt1=trans.transform(p1.getValue()-0.5*width.getValue(),-1e10);
+            pnt2=trans.transform(p1.getValue()+0.5*width.getValue(),1e10);
+            ret=new Rectangle2D.Double(pnt1.getX(),pnt1.getY(),0,0);
+            ret.add(pnt2);
+            return ret;
+        case HORIZONTAL:
+            pnt1=trans.transform(-1e10,s1.getValue()-0.5*width.getValue());
+            pnt2=trans.transform(1e10,s1.getValue()+0.5*width.getValue());
+            ret=new Rectangle2D.Double(pnt1.getX(),pnt1.getY(),0,0);
+            ret.add(pnt2);
+            return ret;
+        case GENERAL:
+            if(p1.getValue()==p2.getValue() && s1.getValue()==s2.getValue()) {
+                pnt1=trans.transform(p1.getValue()-0.5*width.getValue(),s1.getValue()-0.5*width.getValue());
+                pnt2=trans.transform(p1.getValue()+0.5*width.getValue(),s1.getValue()+0.5*width.getValue());
+                ret=new Rectangle2D.Double(pnt1.getX(),pnt1.getY(),0,0);
+                ret.add(pnt2);
+                return new Ellipse2D.Double(ret.getMinX(),ret.getMinY(),ret.getWidth(),ret.getHeight());
+            } else {
+                double np=s2.getValue()-s1.getValue();
+                double ns=-(p2.getValue()-p1.getValue());
+                double len=Math.sqrt(np*np+ns*ns);
+                np*=0.5*width.getValue()/len;
+                ns*=0.5*width.getValue()/len;
+                GeneralPath gp=new GeneralPath();
+                pnt1=trans.transform(p1.getValue()+np,s1.getValue()+ns);
+                gp.moveTo((float)pnt1.getX(),(float)pnt1.getY());
+                pnt1=trans.transform(p1.getValue()-np,s1.getValue()-ns);
+                gp.lineTo((float)pnt1.getX(),(float)pnt1.getY());
+                pnt1=trans.transform(p2.getValue()-np,s2.getValue()-ns);
+                gp.lineTo((float)pnt1.getX(),(float)pnt1.getY());
+                pnt1=trans.transform(p2.getValue()+np,s2.getValue()+ns);
+                gp.lineTo((float)pnt1.getX(),(float)pnt1.getY());
+                gp.closePath();
+                return gp;
+            }
+        }
+        return null;
+    }
+
+    public String getDescription() {
+        return "Slice Selection Filter";
+    }
+    
+    public static String getTypeDescription() { return "Slice Selection Filter (Listener)"; }
+
+    public SliceSelectionFilter copy(List<GraphElement> l) {
+        return new SliceSelectionFilter(this,l);
+    }
+
+    public int getNumParameters(int stream) {
+        if(input==null) return 0;
+        return input.getNumParameters(0);
+    }
+
+    public String getParameterDescription(int stream, int which) {
+        if(input==null) return "";
+        return input.getParameterDescription(0, which);
+    }
+
+    public int getNumValues(int stream) {
+        if(input==null) return 0;
+        return input.getNumValues(0)+2;
+    }
+
+    public String getValueDescription(int stream, int which) {
+        if(input==null) return "";
+        if(which<input.getNumValues(0)) return input.getValueDescription(0, which);
+        if(which==input.getNumValues(0)) return "Slice Distance";
+        if(which==input.getNumValues(0)+1) return "Slice Offset";
+        return "";
+    }
+    
+    private DataFormula f1=new DataFormula("v[0]");
+    private DataFormula f2=new DataFormula("v[1]");
+    private EditableDouble p1=new EditableDouble(0.0);
+    private EditableDouble s1=new EditableDouble(0.0);
+    private EditableDouble p2=new EditableDouble(0.0);
+    private EditableDouble s2=new EditableDouble(0.0);
+    private CutStyle cutStyle=CutStyle.VERTICAL;
+    private EditableDouble width=new EditableDouble(0.1);
+    private EditableBoolean redoOnDrag=new EditableBoolean(false);
+
+    private enum CutStyle {VERTICAL,HORIZONTAL,GENERAL};
+    
+    private transient JLabel v1Label;
+    private transient JLabel v2Label;
+    
+    private static final long serialVersionUID=146134718724698l;
+}

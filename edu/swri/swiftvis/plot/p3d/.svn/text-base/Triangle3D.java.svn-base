@@ -1,0 +1,114 @@
+/*
+ * Created on Dec 29, 2006
+ */
+package edu.swri.swiftvis.plot.p3d;
+
+
+public final class Triangle3D implements Geom3D {
+    public Triangle3D(double x1,double y1,double z1,double x2,double y2,double z2,double x3,
+            double y3,double z3) {            
+        p[0]=new Vect3D(x1,y1,z1);
+        p[1]=new Vect3D(x2,y2,z2);
+        p[2]=new Vect3D(x3,y3,z3);
+        calcNorm();     
+    }
+
+    public Triangle3D(double[] p1,double[] p2,double[] p3) {
+        p[0]=new Vect3D(p1);
+        p[1]=new Vect3D(p2);
+        p[2]=new Vect3D(p3);
+        calcNorm();     
+    }
+    
+    public Triangle3D(Vect3D p1,Vect3D p2,Vect3D p3) {
+        p[0]=p1;
+        p[1]=p2;
+        p[2]=p3;
+        calcNorm();     
+    }
+    
+    public Triangle3D(Vect3D p1,Vect3D p2,Vect3D p3,Vect3D n1,Vect3D n2,Vect3D n3) {
+        p[0]=p1;
+        p[1]=p2;
+        p[2]=p3;
+        norm=new Vect3D[3];
+        norm[0]=n1;
+        norm[1]=n2;
+        norm[2]=n3;
+    }
+    
+    public Triangle3D(Vect3D[] pnts) {
+        p[0]=pnts[0];
+        p[1]=pnts[1];
+        p[2]=pnts[2];
+        calcNorm();     
+    }
+    
+    public Triangle3D(Vect3D[] pnts,Vect3D[] norms) {
+        p[0]=pnts[0];
+        p[1]=pnts[1];
+        p[2]=pnts[2];
+        norm=new Vect3D[3];
+        norm[0]=norms[0];
+        norm[1]=norms[1];
+        norm[2]=norms[2];
+    }
+    
+    public Triangle3D(double[][] pnts) {
+        p[0]=new Vect3D(pnts[0]);
+        p[1]=new Vect3D(pnts[1]);
+        p[2]=new Vect3D(pnts[2]);
+        calcNorm();     
+    }
+    
+    public void render(RenderEngine re) {
+        //re.draw(this);        
+    }
+
+    public Vect3D[] getNormals() {
+        return norm;
+    }
+    
+    public double getCoord(int point,int axis) {
+        return p[point].get(axis);
+    }
+    
+    public Vect3D getPoint(int point) {
+        return p[point];
+    }
+    
+    public void translate(Vect3D trans) {
+    	p[0] = p[0].plus(trans);
+    	p[1] = p[1].plus(trans);
+    	p[2] = p[2].plus(trans);
+    }
+    
+    // Added for ensuring normals are the right way on a surface
+    public void originNormal() {
+    	calcNorm();
+    	Vect3D avg = p[0].plus(p[1].plus(p[2]));
+    	avg.normalize();
+    	
+    	if (Basic.dotProduct(norm[0], avg) < 0) {
+    		norm[0] = norm[0].mult(-1.0);
+    	}
+    	
+    	/*if (Basic.magnitude(avg.plus(norm[0])) < Basic.magnitude(avg)) {
+    		norm[0] = norm[0].mult(-1.0);
+    		System.out.println(norm[0] + " | " + avg + " | " + avg.plus(norm[0]));
+    		System.out.println("Facing the wrong way - fixing!");
+    		
+    	}*/
+    }
+        
+    private void calcNorm() {
+        double[] l1={p[1].get(0)-p[0].get(0),p[1].get(1)-p[0].get(1),p[1].get(2)-p[0].get(2)};
+        double[] l2={p[2].get(0)-p[0].get(0),p[2].get(1)-p[0].get(1),p[2].get(2)-p[0].get(2)};
+        norm=new Vect3D[1];
+        norm[0]=new Vect3D(Basic.crossProduct(l1,l2));
+        norm[0]=Basic.normalize(norm[0]);
+    }
+
+    private Vect3D[] p = new Vect3D[3];
+    private Vect3D[] norm;
+}

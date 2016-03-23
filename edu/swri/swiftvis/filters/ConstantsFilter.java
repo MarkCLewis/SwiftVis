@@ -1,0 +1,321 @@
+/*
+ * Created on Aug 29, 2005
+ */
+package edu.swri.swiftvis.filters;
+
+import java.awt.BorderLayout;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+
+import edu.swri.swiftvis.DataElement;
+import edu.swri.swiftvis.DataFormula;
+import edu.swri.swiftvis.GraphElement;
+import edu.swri.swiftvis.util.EditableInt;
+import edu.swri.swiftvis.util.EditableString;
+import edu.swri.swiftvis.util.ThreadHandler;
+
+public class ConstantsFilter extends AbstractSingleSourceFilter {
+    public ConstantsFilter() {}
+    
+    private ConstantsFilter(ConstantsFilter c,List<GraphElement> l) {
+        super(c,l);
+        for(DataFormula df:c.params) {
+            params.add(df);
+        }
+        for(String s:c.paramNames) {
+            paramNames.add(s);
+        }
+        for(DataFormula df:c.values) {
+            values.add(df);
+        }
+        for(String s:c.valueNames) {
+            valueNames.add(s);
+        }
+        numElements=new EditableInt(c.numElements.getValue());
+        elem=c.elem;
+    }
+
+    @Override
+    protected boolean doingInThreads() {
+    	return false;
+    }
+    @Override
+    protected void redoAllElements() {
+        for(DataFormula df:params) df.clearGroupSelection();
+        for(DataFormula df:values) df.clearGroupSelection();
+    	int[] p=new int[params.size()];
+    	float[] v=new float[values.size()];
+    	for(int i=0; i<p.length; ++i) p[i]=(int)params.get(i).valueOf(this,0, 0);
+    	for(int i=0; i<v.length; ++i) v[i]=(float)values.get(i).valueOf(this,0, 0);
+    	elem=new DataElement(p,v);
+    }
+
+    @Override
+    protected void setupSpecificPanelProperties() {
+        JPanel outerPanel=new JPanel(new BorderLayout());
+        JPanel panel=new JPanel(new BorderLayout());
+        panel.add(new JLabel("Num Elements"),BorderLayout.WEST);
+        panel.add(numElements.getTextField(null),BorderLayout.CENTER);
+        outerPanel.add(panel,BorderLayout.NORTH);
+        panel=new JPanel(new GridLayout(2,1));
+        JPanel innerPanel=new JPanel(new BorderLayout());
+        innerPanel.setBorder(BorderFactory.createTitledBorder("Parameters"));
+        JPanel northPanel=new JPanel(new GridLayout(1,2));
+        JButton button=new JButton("Add");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                paramNames.add("Param");
+                params.add(new DataFormula("0"));
+                setParamOptions();
+                paramList.setSelectedIndex(params.size()-1);
+            }
+        });
+        northPanel.add(button);
+        button=new JButton("Remove");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int index=paramList.getSelectedIndex();
+                if(index>=0) {
+                    paramNames.remove(index);
+                    params.remove(index);
+                    setParamOptions();
+                }
+            }
+        });
+        northPanel.add(button);
+        innerPanel.add(northPanel,BorderLayout.NORTH);
+        paramList=new JList();
+        setParamOptions();
+        paramList.addListSelectionListener(new ListSelectionListener() {
+            @Override
+            public void valueChanged(ListSelectionEvent e) {
+                editParam=paramList.getSelectedIndex();
+                if(editParam>=0) {
+                    paramName.setValue(paramNames.get(editParam));
+                    paramVal.setValue(params.get(editParam).getFormula());
+                }
+            }
+        });
+        innerPanel.add(new JScrollPane(paramList),BorderLayout.CENTER);
+        JPanel southPanel=new JPanel(new GridLayout(2,1));
+        JPanel fieldPanel=new JPanel(new BorderLayout());
+        fieldPanel.add(new JLabel("Parameter Name"),BorderLayout.WEST);
+        paramName=new EditableString("");
+        fieldPanel.add(paramName.getTextField(new EditableString.Listener() {
+            @Override
+            public void valueChanged() {
+                if(editParam<0) return;
+                paramNames.set(editParam,paramName.getValue());
+                setParamOptions();
+                paramList.setSelectedIndex(editParam);
+            }
+        }),BorderLayout.CENTER);
+        southPanel.add(fieldPanel);
+        fieldPanel=new JPanel(new BorderLayout());
+        fieldPanel.add(new JLabel("Parameter Value"),BorderLayout.WEST);
+        paramVal=new EditableString("0");
+        fieldPanel.add(paramVal.getTextField(new EditableString.Listener() {
+            @Override
+            public void valueChanged() {
+                if(editParam<0) return;
+                params.set(editParam,new DataFormula(paramVal.getValue()));
+                setParamOptions();
+                paramList.setSelectedIndex(editParam);
+            }
+        }),BorderLayout.CENTER);
+        southPanel.add(fieldPanel);
+        innerPanel.add(southPanel,BorderLayout.SOUTH);
+        panel.add(innerPanel);
+
+        innerPanel=new JPanel(new BorderLayout());
+        innerPanel.setBorder(BorderFactory.createTitledBorder("Values"));
+        northPanel=new JPanel(new GridLayout(1,2));
+        button=new JButton("Add");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                valueNames.add("Value");
+                values.add(new DataFormula("0.0"));
+                setValueOptions();
+                valueList.setSelectedIndex(values.size()-1);
+            }
+        });
+        northPanel.add(button);
+        button=new JButton("Remove");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int index=valueList.getSelectedIndex();
+                if(index>=0) {
+                    valueNames.remove(index);
+                    values.remove(index);
+                    setValueOptions();
+                }
+            }
+        });
+        northPanel.add(button);
+        innerPanel.add(northPanel,BorderLayout.NORTH);
+        valueList=new JList();
+        setValueOptions();
+        valueList.addListSelectionListener(new ListSelectionListener() {
+            @Override
+            public void valueChanged(ListSelectionEvent e) {
+                editValue=valueList.getSelectedIndex();
+                if(editValue>=0) {
+                    valueName.setValue(valueNames.get(editValue));
+                    valueVal.setValue(values.get(editValue).getFormula());
+                }
+            }
+        });
+        innerPanel.add(new JScrollPane(valueList),BorderLayout.CENTER);
+        southPanel=new JPanel(new GridLayout(2,1));
+        fieldPanel=new JPanel(new BorderLayout());
+        fieldPanel.add(new JLabel("Value Name"),BorderLayout.WEST);
+        valueName=new EditableString("");
+        fieldPanel.add(valueName.getTextField(new EditableString.Listener() {
+            @Override
+            public void valueChanged() {
+                if(editValue<0) return;
+                valueNames.set(editValue,valueName.getValue());
+                setValueOptions();
+                valueList.setSelectedIndex(editValue);
+            }
+        }),BorderLayout.CENTER);
+        southPanel.add(fieldPanel);
+        fieldPanel=new JPanel(new BorderLayout());
+        fieldPanel.add(new JLabel("Value Value"),BorderLayout.WEST);
+        valueVal=new EditableString("0");
+        fieldPanel.add(valueVal.getTextField(new EditableString.Listener() {
+            @Override
+            public void valueChanged() {
+                if(editValue<0) return;
+                values.set(editValue,new DataFormula(valueVal.getValue()));
+                setValueOptions();
+                valueList.setSelectedIndex(editValue);
+            }
+        }),BorderLayout.CENTER);
+        southPanel.add(fieldPanel);
+        innerPanel.add(southPanel,BorderLayout.SOUTH);
+        panel.add(innerPanel);
+        
+        outerPanel.add(panel,BorderLayout.CENTER);
+        button=new JButton("Propagate Changes");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                abstractRedoAllElements();
+            }
+        });
+        outerPanel.add(button,BorderLayout.SOUTH);
+        
+        propPanel.add("Constants",outerPanel);
+    }
+
+    @Override
+    protected void localRedo() {
+        ThreadHandler.instance().loadWaitTask(this,new Runnable() {
+            @Override
+            public void run() {
+                redoAllElements();
+            }
+        });
+        ThreadHandler.instance().waitForAll(this);
+        if(getOutputInfoPanel()!=null) getOutputInfoPanel().redoOutputTable();
+    }
+
+    @Override
+    public DataElement getElement(int i, int stream){
+        return elem;
+    }
+
+    @Override
+    public int getNumElements(int stream){ return numElements.getValue(); }
+
+    @Override
+    public int getNumParameters(int stream) {
+        return params.size();
+    }
+
+    @Override
+    public String getParameterDescription(int stream, int which) {
+        return paramNames.get(which);
+    }
+
+    @Override
+    public int getNumValues(int stream) {
+        return values.size();
+    }
+
+    @Override
+    public String getValueDescription(int stream, int which) {
+        return valueNames.get(which);
+    }
+
+    @Override
+    public String getDescription() {
+        return "Constants Filter";
+    }
+
+    public static String getTypeDescription() {
+        return "Constants Filter";
+    }
+
+    @Override
+    public GraphElement copy(List<GraphElement> l) {
+        return new ConstantsFilter(this,l);
+    }
+    
+    private void setParamOptions() {
+        String[] options=new String[params.size()];
+        for(int i=0; i<params.size(); ++i) {
+            options[i]="p["+i+"] : "+paramNames.get(i)+" : "+params.get(i).getFormula();
+        }
+        int index=paramList.getSelectedIndex();
+        paramList.setListData(options);
+        if(index>=0) paramList.setSelectedIndex(index);
+    }
+    
+    private void setValueOptions() {
+        String[] options=new String[values.size()];
+        for(int i=0; i<values.size(); ++i) {
+            options[i]="v["+i+"] : "+valueNames.get(i)+" : "+values.get(i).getFormula();
+        }
+        int index=valueList.getSelectedIndex();
+        valueList.setListData(options);
+        if(index>=0) valueList.setSelectedIndex(index);
+    }
+    
+    private List<DataFormula> params=new ArrayList<DataFormula>();
+    private List<String> paramNames=new ArrayList<String>();
+    private List<DataFormula> values=new ArrayList<DataFormula>();
+    private List<String> valueNames=new ArrayList<String>();
+    private EditableInt numElements=new EditableInt(Integer.MAX_VALUE/32);
+    private DataElement elem;
+//    private ConstantsFilter ref=this;
+    
+    private transient JList paramList;
+    private transient int editParam=-1;
+    private transient EditableString paramName;
+    private transient EditableString paramVal;
+    private transient JList valueList; 
+    private transient int editValue=-1;
+    private transient EditableString valueName;
+    private transient EditableString valueVal;
+
+    private static final long serialVersionUID=35348709785458l;
+    
+}

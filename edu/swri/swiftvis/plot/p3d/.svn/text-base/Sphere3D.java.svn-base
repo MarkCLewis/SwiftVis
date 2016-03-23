@@ -1,0 +1,96 @@
+/*
+ * Created on Dec 29, 2006
+ */
+package edu.swri.swiftvis.plot.p3d;
+
+
+public final class Sphere3D implements Geom3D {
+    public Sphere3D(double x,double y,double z,double r) {
+        this(new Vect3D(x,y,z),r);
+    }
+    
+    public Sphere3D(double[] cen,double r) {
+        this(new Vect3D(cen[0],cen[1],cen[2]),r);
+    }
+    
+    public Sphere3D(Vect3D cen,double r) {
+        c=cen;
+        radius=r;
+    }
+
+    public double getX() {
+        return c.get(0);
+    }
+    
+    public double getY() {
+        return c.get(1);
+    }
+    
+    public double getZ() {
+        return c.get(2);
+    }
+
+    public double getRadius() {
+        return radius;
+    }
+
+    public Vect3D getCenter() {
+        return c;
+    }
+
+    
+    public boolean contains(double[] p) {
+        return Basic.distanceSqr(p,c)<=radius*radius;
+    }
+    
+    public boolean contains(Vect3D p) {
+        return Basic.distanceSqr(p,c)<=radius*radius;
+    }
+    
+    public double distanceInside(double[] p) {
+        double ret=Basic.distance(p,c);
+        if(ret<=radius) return radius-ret;
+        return -1;
+    }
+    
+    public double distanceInside(Vect3D p) {
+        double ret=Basic.distance(p,c);
+        if(ret<=radius) return radius-ret;
+        return -1;
+    }
+
+    public void render(RenderEngine re) {
+        //re.draw(this);
+    }
+
+    /**
+     * This method is intended to create a "mutual bounding sphere".  Given the two
+     * sphere it makes this new on large enough to contain both.
+     * @param s1 A sphere to be contianed in this new one.
+     * @param s2 Another sphere to be contained in this new one.
+     */
+    public static Sphere3D mutualBoundingSphere(Sphere3D s1,Sphere3D s2) {
+        if(s1.radius<s2.radius) {
+            Sphere3D tmp=s1;
+            s1=s2;
+            s2=tmp;
+        }
+        double dist=Basic.distance(s1.c,s2.c);
+        if(s1.radius>=s2.radius+dist) {
+            return s1;
+        }
+        double c0=s1.c.get(0);
+        double c1=s1.c.get(1);
+        double c2=s1.c.get(2);
+        double tsep=dist+s1.radius+s2.radius;
+        double radius=0.5*tsep;
+        double moveFact=(radius-s1.radius)/dist;
+        c0+=moveFact*(s2.c.get(0)-c0);
+        c1+=moveFact*(s2.c.get(1)-c1);
+        c2+=moveFact*(s2.c.get(2)-c2);
+        return new Sphere3D(c0,c1,c2,radius);
+    }
+
+    private Vect3D c;
+    private double radius;
+}

@@ -1,0 +1,84 @@
+/*
+ * Created on Jul 22, 2004
+ */
+package edu.swri.swiftvis.util;
+
+import java.awt.BorderLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.io.Serializable;
+
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+
+/**
+ * This class can be used to store strings that need to be edited in a GUI.  Using this class
+ * prevents the programmer from having to write handler code dealing with event handling.
+ * It also makes it so that when the value is changed the GUI component is updates.
+ * 
+ * @author Mark Lewis
+ */
+public final class EditableString implements Serializable {
+    public EditableString(String val) { value=val; }
+
+    public String getValue() {
+        return value;
+    }
+
+    public void setValue(String val) {
+        value = val;
+        if (field != null)
+            field.setText(val);
+    }
+
+    
+    public JTextField getTextField(Listener edl) {
+        if(field==null) {
+            listener=edl;
+            field=new JTextField(value);
+            field.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) { valueChanged(); }
+        	} );
+            field.addFocusListener(new FocusAdapter() {
+                public void focusLost(FocusEvent e) { valueChanged(); }
+        	} );
+        }
+        return field;
+    }
+    
+    public JPanel getLabeledTextField(String label,Listener edl) {
+        JPanel ret=new JPanel(new BorderLayout());
+        ret.add(new JLabel(label),BorderLayout.WEST);
+        ret.add(getTextField(edl),BorderLayout.CENTER);
+        return ret;
+    }
+    
+    @Override
+    public String toString() {
+        return value;
+    }
+    
+    public interface Listener {
+        void valueChanged();
+    }
+    
+    private void valueChanged() {
+        String tmp=field.getText();
+        if(!tmp.equals(value)) {
+            value=tmp;
+            if(listener!=null) {
+                listener.valueChanged();
+            }
+        }
+    }
+
+    private String value;
+
+    private transient JTextField field;
+
+    private transient Listener listener;
+    private static final long serialVersionUID=347347908283576l;
+}

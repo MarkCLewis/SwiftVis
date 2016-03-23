@@ -1,0 +1,617 @@
+package edu.swri.swiftvis.plot.styles;
+
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
+import java.io.Serializable;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JTable;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.table.AbstractTableModel;
+
+import edu.swri.swiftvis.BooleanFormula;
+import edu.swri.swiftvis.DataFormula;
+import edu.swri.swiftvis.DataSink;
+import edu.swri.swiftvis.plot.DataPlotStyle;
+import edu.swri.swiftvis.plot.PlotArea2D;
+import edu.swri.swiftvis.plot.PlotLegend;
+import edu.swri.swiftvis.plot.PlotTransform;
+import edu.swri.swiftvis.plot.util.ColorEditor;
+import edu.swri.swiftvis.plot.util.ColorRenderer;
+import edu.swri.swiftvis.plot.util.FontOptions;
+import edu.swri.swiftvis.plot.util.FormattedString;
+import edu.swri.swiftvis.plot.util.LegendHelper;
+import edu.swri.swiftvis.plot.util.StrokeOptions;
+import edu.swri.swiftvis.util.EditableBoolean;
+import edu.swri.swiftvis.util.EditableDouble;
+import edu.swri.swiftvis.util.EditableString;
+import edu.swri.swiftvis.util.SourceMapDialog;
+
+/**
+ * This is a plotting style that is intended to be used to make plots that look like histograms.
+ * There are a number of different options for this type of plot.  You can have more than one value
+ * plotted as a bar per element.  These can be placed side-by-side or stacked.  The x-axis can be taken
+ * from a formula or just as the index of the element.  In either case, bars can be labeled above or
+ * on the bars.
+ * 
+ * @author Mark Lewis
+ */
+public final class BarStyle implements DataPlotStyle {
+    public BarStyle(PlotArea2D pa) {
+        plotArea=pa;
+        bars.add(new BarDescription());
+    }
+    
+    public BarStyle(BarStyle c,PlotArea2D pa) {
+        plotArea=pa;
+        name=new EditableString(c.name.getValue());
+        groupByElement=new EditableBoolean(c.groupByElement.getValue());
+        for(BarDescription bd:c.bars) {
+            bars.add(new BarDescription(bd));
+        }
+        elementNames.addAll(c.elementNames);
+        stroke=new StrokeOptions(null,c.stroke);
+        font=new FontOptions(null,c.font.getFont());
+        legend=new Legend(c.legend);
+    }
+    
+    @Override
+    public PlotLegend getLegendInformation() {
+        return legend;
+    }
+
+    @Override
+    public JComponent getPropertiesPanel(){
+        if(propPanel==null) {
+            propPanel=new JPanel(new BorderLayout());
+            JPanel panel=new JPanel(new BorderLayout());
+            panel.add(new JLabel("Name"),BorderLayout.WEST);
+            panel.add(name.getTextField(null),BorderLayout.CENTER);
+            propPanel.add(panel,BorderLayout.NORTH);
+            Box box=new Box(BoxLayout.Y_AXIS);
+            JButton mapButton=new JButton("Remap Sources");
+            mapButton.addActionListener(new ActionListener() {
+                @Override public void actionPerformed(ActionEvent e) {
+                    Map<Integer,Integer> newSources=SourceMapDialog.showDialog(propPanel);
+                    if(newSources!=null) mapSources(newSources);
+                }
+            });
+            box.add(mapButton);
+            
+            box.add(groupByElement.getCheckBox("Group bars by element?", null));
+            
+            JPanel elementNamePanel=new JPanel(new BorderLayout());
+            elementNamePanel.setBorder(BorderFactory.createTitledBorder("Element Names"));
+            elementNameTable=new JTable(new ElementNameTableModel());
+            elementNamePanel.add(elementNameTable,BorderLayout.CENTER);
+            JButton button=new JButton("Remove");
+            button.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    if(elementNameTable.getSelectedRow()>=0 && elementNameTable.getSelectedRow()<elementNames.size()) {
+                        elementNames.remove(elementNameTable.getSelectedRow());
+                        ((AbstractTableModel)elementNameTable.getModel()).fireTableStructureChanged();
+                    }
+                }
+            });
+            elementNamePanel.add(button,BorderLayout.SOUTH);
+            box.add(elementNamePanel);
+            
+            JPanel barListPanel=new JPanel(new BorderLayout());
+            barListPanel.setBorder(BorderFactory.createTitledBorder("Bars"));
+            barList=new JList();
+            barList.setListData(bars.toArray());
+            barList.addListSelectionListener(new ListSelectionListener() {
+                @Override
+                public void valueChanged(ListSelectionEvent e) {
+                    ((AbstractTableModel)barValueTable.getModel()).fireTableStructureChanged();
+                }
+            });
+            barListPanel.add(barList,BorderLayout.CENTER);
+            panel=new JPanel(new GridLayout(1,2));
+            button=new JButton("Add");
+            button.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    String name=JOptionPane.showInputDialog(propPanel,"What do you want to call this bar?");
+                    bars.add(new BarDescription(new FormattedString(name)));
+                    barList.setListData(bars.toArray());
+                    barList.setSelectedIndex(bars.size()-1);
+                }
+            });
+            panel.add(button);
+            button=new JButton("Remove");
+            button.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    if(bars.size()>1 && barList.getSelectedIndex()>=0) {
+                        bars.remove(barList.getSelectedIndex());
+                        barList.setListData(bars.toArray());
+                        barList.setSelectedIndex(0);
+                    }
+                }
+            });
+            panel.add(button);
+            barListPanel.add(panel,BorderLayout.SOUTH);
+            box.add(barListPanel);
+            
+            JPanel barValuePanel=new JPanel(new BorderLayout());
+            barValuePanel.setBorder(BorderFactory.createTitledBorder("Values"));
+            barValueTable=new JTable(new BarValueTableModel());
+            barValueTable.setDefaultEditor(Color.class, new ColorEditor());
+            barValueTable.setDefaultRenderer(Color.class,new ColorRenderer(true));
+            barValuePanel.add(barValueTable,BorderLayout.CENTER);
+            button=new JButton("Remove");
+            button.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    if(barList.getSelectedIndex()>=0 && barValueTable.getSelectedRow()>=0 && bars.get(barList.getSelectedIndex()).value.size()>1 && barValueTable.getSelectedRow()<bars.get(barList.getSelectedIndex()).value.size()) {
+                        bars.get(barList.getSelectedIndex()).value.remove(barValueTable.getSelectedRow());
+                        ((AbstractTableModel)barValueTable.getModel()).fireTableStructureChanged();
+                    }
+                }
+            });
+            barValuePanel.add(button,BorderLayout.SOUTH);
+            box.add(barValuePanel);
+            
+            panel=new JPanel(new GridLayout(1,2));
+            button=new JButton("Set Stroke");
+            button.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    stroke.edit();
+                }
+            });
+            panel.add(button);
+            button=new JButton("Set Font");
+            button.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    font.edit();
+                }
+            });
+            panel.add(button);
+            box.add(panel);
+            propPanel.add(box,BorderLayout.CENTER);
+            
+            button=new JButton("Apply Changes");
+            button.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    plotArea.forceRedraw();
+                    plotArea.fireRedraw();
+                }
+            } );
+            propPanel.add(button,BorderLayout.SOUTH);
+        }
+        return propPanel;
+    }
+
+    /**
+     * Returns the min and max values for each dimension that this style
+     * supports.  The first index tells which dimension we are looking at and
+     * the second index is 0 for min and 1 for max.
+     * @return The bounds for this data.
+     */
+    @Override
+    public double[][] getBounds(){
+        if(bounds==null) redoBounds();
+        return bounds;
+    }
+
+    @Override
+    public void drawToGraphics(Graphics2D g,PlotTransform trans){
+        DataSink sink=plotArea.getSink();
+        int[] indexRange=bars.get(0).value.get(0).formula.getSafeElementRange(sink, 0);
+        for(BarDescription bd:bars) {
+            for(BarValue bv:bd.value) {
+                DataFormula.mergeSafeElementRanges(indexRange,bv.formula.getSafeElementRange(sink, 0));
+            }
+        }
+        DataFormula.checkRangeSafety(indexRange,sink);
+        double barsInGroup=(!groupByElement.getValue())?(indexRange[1]-indexRange[0]):(bars.size());
+        double width=0.8/barsInGroup;
+        double top=0;
+        for(int b=0; b<bars.size(); ++b) {
+            BarDescription bd=bars.get(b);
+            for(int i=indexRange[0]; i<indexRange[1]; ++i) {
+                double center;
+                if(groupByElement.getValue()) {
+                    center=(0.5+b)*width+0.1+(i-indexRange[0]);
+                } else {
+                    center=(0.5+(i-indexRange[0]))*width+0.1+b;
+                }
+                double t=drawBar(g,trans,bd,center,width,i);
+                if(t>top) top=t;
+            }
+        }
+        int numGroups=(groupByElement.getValue())?(indexRange[1]-indexRange[0]):(bars.size());
+        for(int i=0; i<numGroups; ++i) {
+            FormattedString label=null;
+            if(groupByElement.getValue()) {
+                if(i<elementNames.size()) label=elementNames.get(i);
+            } else {
+                label=bars.get(i).name;
+            }
+            if(label!=null) {
+                Point2D p=trans.transform(i+0.5,top*1.03);
+                Font f=font.getFont();
+                Rectangle2D stringBounds=label.getBounds(font.getFont(),sink);
+                g.setFont(f);
+                g.setColor(Color.black);
+                label.draw(g,(float)(p.getX()-stringBounds.getWidth()*0.5),(float)(p.getY()),sink);
+            }
+        }
+    }
+
+    @Override
+    public void redoBounds(){
+        DataSink sink=plotArea.getSink();
+        int[] indexRange=bars.get(0).value.get(0).formula.getSafeElementRange(sink, 0);
+        for(BarDescription bd:bars) {
+            for(BarValue bv:bd.value) {
+                DataFormula.mergeSafeElementRanges(indexRange,bv.formula.getSafeElementRange(sink, 0));
+            }
+        }
+        DataFormula.checkRangeSafety(indexRange,sink);
+        if(bounds==null) bounds=new double[2][2];
+        bounds[0][0]=0.0;
+        bounds[0][1]=(groupByElement.getValue())?(indexRange[1]-indexRange[0]):(bars.size());
+        if(indexRange[0]>=0) {
+            bounds[1][0]=0;
+            bounds[1][1]=0;
+            for(BarDescription bd:bars) {
+                for(int i=indexRange[0]; i<indexRange[1]; ++i) {
+                    double v=0;
+                    for(BarValue bv:bd.value) {
+                        v+=bv.formula.valueOf(sink,0, i);
+                    }
+                    if(v>bounds[1][1]) bounds[1][1]=v;
+                }
+            }
+            bounds[1][1]+=(bounds[1][1]-bounds[1][0])*0.1;
+        } else {
+            bounds[1][0]=0;
+            bounds[1][1]=10;
+        }
+    }
+
+    @Override
+    public BarStyle copy(PlotArea2D pa) {
+        return new BarStyle(this,pa);
+    }
+    
+    public static String getTypeDescription() { return "Bar Plot"; }
+    
+    @Override
+    public String toString() { return name.getValue(); }
+
+    private double drawBar(Graphics2D g,PlotTransform trans,BarDescription bar,double center,double width,int index) {
+        double bottom=0;
+        for(BarValue bv:bar.value) {
+            double val=bv.formula.valueOf(plotArea.getSink(),0, index);
+            Point2D p1=trans.transform(center-width*0.5,bottom);
+            Point2D p2=trans.transform(center+width*0.5,bottom+val);
+            double minx,miny,maxx,maxy;
+            if(p1.getX()<p2.getX()) {
+                minx=p1.getX();
+                maxx=p2.getX();
+            } else {
+                minx=p2.getX();
+                maxx=p1.getX();
+            }
+            if(p1.getY()<p2.getY()) {
+                miny=p1.getY();
+                maxy=p2.getY();
+            } else {
+                miny=p2.getY();
+                maxy=p1.getY();
+            }
+            Rectangle2D rect=new Rectangle2D.Double(minx,miny,maxx-minx,maxy-miny);
+            g.setPaint(bv.fillColor);
+            g.fill(rect);
+            g.setPaint(bv.borderColor);
+            g.setStroke(stroke.getStroke());
+            g.draw(rect);
+            bottom+=val;
+        }
+        return bottom;
+    }
+    
+    private void mapSources(Map<Integer,Integer> newSources) {
+        if(newSources.isEmpty()) return;
+        Field[] fields=this.getClass().getDeclaredFields();
+        for(Field f:fields) {
+            if(DataFormula.class.isAssignableFrom(f.getType())) {
+                try {
+                    ((DataFormula)f.get(this)).mapSources(newSources);
+                } catch (IllegalArgumentException e) {
+                    e.printStackTrace();
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
+            }
+            if(BooleanFormula.class.isAssignableFrom(f.getType())) {
+                try {
+                    ((BooleanFormula)f.get(this)).mapSources(newSources);
+                } catch (IllegalArgumentException e) {
+                    e.printStackTrace();
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }                
+            }
+        }
+        for(BarDescription bd:bars) {
+            for(BarValue bv:bd.value) {
+                bv.formula.mapSources(newSources);
+            }
+        }
+    }
+
+    private PlotArea2D plotArea;
+    private EditableString name=new EditableString("Bar Plot");
+    private EditableBoolean groupByElement=new EditableBoolean(true);
+    private List<BarDescription> bars=new ArrayList<BarDescription>();
+    private List<FormattedString> elementNames=new ArrayList<FormattedString>();
+    private StrokeOptions stroke=new StrokeOptions(1,null);
+    private FontOptions font=new FontOptions(null);
+    private Legend legend=new Legend();
+    private double[][] bounds;
+    
+    private transient JPanel propPanel;
+    private transient JTable elementNameTable;
+    private transient JList barList;
+    private transient JTable barValueTable;
+    
+    private static final long serialVersionUID=75609823756l;
+    
+    private static class BarDescription implements Serializable {
+        public BarDescription() {
+            value.add(new BarValue());
+        }
+        public BarDescription(FormattedString n) {
+            name=n;
+            value.add(new BarValue());
+        }
+        public BarDescription(BarDescription c) {
+            name=c.name;
+            for(BarValue bv:c.value) {
+                value.add(new BarValue(bv));
+            }
+        }
+        @Override
+        public String toString() { return name.getValue(); }
+        
+        private FormattedString name=new FormattedString("Bar 1");
+        private List<BarValue> value=new ArrayList<BarValue>();
+        private static final long serialVersionUID=787345098357623467l;
+    }
+    
+    private static class BarValue implements Serializable {
+        public BarValue() {}
+        public BarValue(BarValue c) {
+            name=c.name;
+            formula=new DataFormula(c.formula.getFormula());
+            fillColor=c.fillColor;
+            borderColor=c.borderColor;
+        }
+        private FormattedString name=new FormattedString("Value");
+        private DataFormula formula=new DataFormula("v[0]");
+        private Color fillColor=Color.black;
+        private Color borderColor=Color.black;
+        private static final long serialVersionUID = 2274081283361473089L;
+    }
+    
+    private class Legend implements PlotLegend,Serializable {
+        public Legend() {}
+        public Legend(Legend c) {
+            showLegend=new EditableBoolean(c.showLegend.getValue());
+            relativeSize=new EditableDouble(c.relativeSize.getValue());
+        }
+        @Override
+        public JComponent getPropertiesPanel() {
+            if(propPanel==null) {
+                propPanel=new JPanel(new BorderLayout());
+                JPanel panel=new JPanel(new GridLayout(2,1));
+                panel.add(showLegend.getCheckBox("Draw Legend?",null));
+                JPanel innerPanel=new JPanel(new BorderLayout());
+                innerPanel.add(new JLabel("Relative Size"),BorderLayout.WEST);
+                innerPanel.add(relativeSize.getTextField(null),BorderLayout.CENTER);
+                panel.add(innerPanel);
+                propPanel.add(panel,BorderLayout.NORTH);
+
+                JButton button=new JButton("Apply Changes");
+                button.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        plotArea.forceRedraw();
+                        plotArea.fireRedraw();
+                    }
+                } );
+                propPanel.add(button,BorderLayout.SOUTH);
+            }
+            return propPanel;
+        }
+
+        @Override
+        public void drawToGraphics(Graphics2D g, Rectangle2D bounds) {
+            int totalNum=0;
+            for(BarDescription bd:bars) {
+                totalNum+=bd.value.size();
+            }
+            double height=bounds.getHeight()/totalNum;
+            double top=bounds.getMinY();
+            for(BarDescription bd:bars) {
+                for(BarValue bv:bd.value) {
+                    Rectangle2D fillBox=new Rectangle2D.Double(bounds.getMinX()+0.1*bounds.getWidth(),top+0.1*height,bounds.getWidth()*0.3,height*0.8);
+                    Rectangle2D textBox=new Rectangle2D.Double(bounds.getMinX()+0.5*bounds.getWidth(),top+0.1*height,bounds.getWidth()*0.5,height*0.8);
+                    g.setPaint(bv.fillColor);
+                    g.fill(fillBox);
+                    g.setPaint(bv.borderColor);
+                    g.setStroke(stroke.getStroke());
+                    g.draw(fillBox);
+                    g.setPaint(Color.black);
+                    LegendHelper.drawText(g,textBox,bv.name,plotArea.getSink(),font.getFont());
+                    top+=height;
+                }
+            }            
+        }
+
+        @Override
+        public boolean isDrawn() {
+            return showLegend.getValue();
+        }
+
+        @Override
+        public double relativeVerticalSize() {
+            return relativeSize.getValue();
+        }
+
+        private EditableBoolean showLegend=new EditableBoolean(false);
+        private EditableDouble relativeSize=new EditableDouble(5);
+        
+        private transient JPanel propPanel;
+
+        private static final long serialVersionUID = -2255922535404502087L;
+    }
+    
+    private class ElementNameTableModel extends AbstractTableModel {
+        @Override
+        public int getColumnCount() {
+            return 1;
+        }
+
+        @Override
+        public int getRowCount() {
+            return elementNames.size()+1;
+        }
+
+        @Override
+        public Object getValueAt(int rowIndex, int columnIndex) {
+            if(rowIndex<elementNames.size()) return elementNames.get(rowIndex).getValue();
+            return "";
+        }
+        
+        @Override
+        public Class<?> getColumnClass(int col) {
+            return String.class;
+        }
+        
+        @Override
+        public boolean isCellEditable(int row,int col) {
+            return true;
+        }
+        
+        @Override
+        public void setValueAt(Object o,int row,int col) {
+            if(row<elementNames.size()) {
+                elementNames.set(row,new FormattedString(o.toString()));
+                fireTableCellUpdated(row,col);
+            } else {
+                elementNames.add(new FormattedString(o.toString()));
+                fireTableStructureChanged();
+            }
+        }
+        private static final long serialVersionUID = -465538821381432362L;
+    }
+
+    private class BarValueTableModel extends AbstractTableModel {
+        @Override
+        public int getColumnCount() {
+            return 4;
+        }
+
+        @Override
+        public int getRowCount() {
+            if(barList.getSelectedIndex()<0) return 0;
+            return bars.get(barList.getSelectedIndex()).value.size()+1;
+        }
+
+        @Override
+        public Object getValueAt(int rowIndex, int columnIndex) {
+            if(barList.getSelectedIndex()<0) return "";
+            if(rowIndex>=bars.get(barList.getSelectedIndex()).value.size()) {
+                if(columnIndex<2) return "";
+                else return Color.black;
+            }
+            switch(columnIndex) {
+            case 0: return bars.get(barList.getSelectedIndex()).value.get(rowIndex).name.getValue();
+            case 1: return bars.get(barList.getSelectedIndex()).value.get(rowIndex).formula.getFormula();
+            case 2: return bars.get(barList.getSelectedIndex()).value.get(rowIndex).fillColor;
+            case 3: return bars.get(barList.getSelectedIndex()).value.get(rowIndex).borderColor;
+            default: return "";
+            }
+        }
+        
+        @Override
+        public Class<?> getColumnClass(int col) {
+            if(col<2) return String.class;
+            return Color.class;
+        }
+        
+        @Override
+        public String getColumnName(int col) {
+            switch(col) {
+            case 0: return "Label";
+            case 1: return "Formula";
+            case 2: return "Fill Color";
+            case 3: return "Line Color";
+            default: return "";
+            }
+        }
+        
+        @Override
+        public boolean isCellEditable(int row,int col) {
+            return true;
+        }
+        
+        @Override
+        public void setValueAt(Object o,int row,int col) {
+            boolean structChange=false;
+            if(row>=bars.get(barList.getSelectedIndex()).value.size()) {
+                bars.get(barList.getSelectedIndex()).value.add(new BarValue());
+                structChange=true;
+            }
+            switch(col) {
+            case 0:
+                bars.get(barList.getSelectedIndex()).value.get(row).name=new FormattedString(o.toString());
+                break;
+            case 1:
+                bars.get(barList.getSelectedIndex()).value.get(row).formula=new DataFormula(o.toString());
+                break;
+            case 2:
+                bars.get(barList.getSelectedIndex()).value.get(row).fillColor=(Color)o;
+                break;
+            case 3:
+                bars.get(barList.getSelectedIndex()).value.get(row).borderColor=(Color)o;
+                break;
+            }
+            if(structChange) {
+                ((AbstractTableModel)barValueTable.getModel()).fireTableStructureChanged();
+            } else {
+                ((AbstractTableModel)barValueTable.getModel()).fireTableCellUpdated(row,col);
+            }
+        }
+        private static final long serialVersionUID = -3246445606642447383L;
+    }
+}

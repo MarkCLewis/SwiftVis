@@ -1,0 +1,84 @@
+/*
+ * Created on May 29, 2009
+ */
+package edu.swri.swiftvis.filters;
+
+import java.util.List;
+
+import edu.swri.swiftvis.DataElement;
+import edu.swri.swiftvis.GraphElement;
+
+public class StreamMergeFilter extends AbstractMultipleSourceFilter {
+    public StreamMergeFilter() {}
+    
+    private StreamMergeFilter(StreamMergeFilter c,List<GraphElement> l) {
+        super(c,l);
+    }
+    
+    @Override
+    protected boolean doingInThreads() {
+        return false;
+    }
+    
+    @Override
+    public int getNumStreams() {
+        return inputVector.size();
+    }
+    
+    @Override
+    public DataElement getElement(int i,int stream) {
+        return inputVector.get(stream).getElement(i,0); 
+    }
+
+    @Override
+    public int getNumElements(int stream){
+        if(inputVector.isEmpty()) return 0;
+        return inputVector.get(stream).getNumElements(0);
+    }
+
+    @Override
+    protected void redoAllElements() {
+    }
+
+    @Override
+    protected void setupSpecificPanelProperties() {
+    }
+    
+    @Override
+    public int getNumParameters(int stream) {
+        if(inputVector.isEmpty()) return 0;
+        return inputVector.get(stream).getNumParameters(0);
+    }
+
+    @Override
+    public String getParameterDescription(int stream, int which) {
+        return inputVector.get(stream).getParameterDescription(0, which);
+    }
+
+    @Override
+    public int getNumValues(int stream) {
+        if(inputVector.isEmpty()) return 0;
+        return inputVector.get(stream).getNumValues(0);
+    }
+
+    @Override
+    public String getValueDescription(int stream, int which) {
+        return inputVector.get(stream).getValueDescription(0, which);
+    }
+
+    @Override
+    public GraphElement copy(List<GraphElement> l) {
+        return new StreamMergeFilter(this,l);
+    }
+
+    @Override
+    public String getDescription() {
+        return "Stream Merge Filter";
+    }
+    
+    public static String getTypeDescription() {
+        return "Stream Merge Filter";
+    }
+
+    private static final long serialVersionUID = -7849473782839179935L;
+}

@@ -1,0 +1,77 @@
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d
+END
+AmbientLight.java
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/AmbientLight.java
+END
+Basic.java
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/Basic.java
+END
+Sphere3D.java
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/Sphere3D.java
+END
+Geom3D.java
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/Geom3D.java
+END
+DirectionalLight.java
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/DirectionalLight.java
+END
+DrawAttributes.java
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/DrawAttributes.java
+END
+Triangle3D.java
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/Triangle3D.java
+END
+RenderEngine.java
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/RenderEngine.java
+END
+Camera3D.java
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/Camera3D.java
+END
+PointLight.java
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/PointLight.java
+END
+Style3D.java
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/Style3D.java
+END
+Vect3D.java
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/Vect3D.java
+END

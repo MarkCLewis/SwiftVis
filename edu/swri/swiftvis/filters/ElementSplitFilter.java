@@ -1,0 +1,219 @@
+/*
+ * Created on Nov 23, 2008
+ */
+package edu.swri.swiftvis.filters;
+
+import java.awt.BorderLayout;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.swing.JButton;
+import javax.swing.JList;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+
+import edu.swri.swiftvis.DataElement;
+import edu.swri.swiftvis.DataFormula;
+import edu.swri.swiftvis.GraphElement;
+import edu.swri.swiftvis.util.EditableBoolean;
+import edu.swri.swiftvis.util.EditableInt;
+
+/**
+ * This filter is supposed to split apart single elements into multiple
+ * elements.
+ * 
+ * @author Mark Lewis
+ */
+public class ElementSplitFilter extends AbstractSingleSourceFilter {
+    public ElementSplitFilter() {
+    }
+    
+    public ElementSplitFilter(ElementSplitFilter c,List<GraphElement> l) {
+        super(c,l);
+        useParams=new EditableBoolean(c.useParams.getValue());
+        startIndex=new EditableInt(c.startIndex.getValue());
+        numInElement=new EditableInt(c.numInElement.getValue());
+        numElements=new EditableInt(c.numElements.getValue());
+        stride=new EditableInt(c.stride.getValue());
+        step=new EditableInt(c.step.getValue());
+        takeList=new ArrayList<DataFormula>();
+        for(DataFormula df:c.takeList) {
+            takeList.add(df);
+        }
+    }
+    
+    @Override
+    protected boolean doingInThreads() {
+        return false;
+    }
+
+    @Override
+    protected void redoAllElements() {
+        sizeDataVectToInputStreams();
+        for(int s=0; s<getSource(0).getNumStreams(); ++s) {
+            int[] params=new int[getNumParameters(s)];
+            float[] vals=new float[getNumValues(s)];
+            int[] range={0,getSource(0).getNumElements(s)};
+            for(DataFormula df:takeList) {
+                DataFormula.mergeSafeElementRanges(range,df.getSafeElementRange(this,s));
+            }
+            DataFormula.checkRangeSafety(range,this);
+            for(int i=range[0]; i<range[1]; ++i) {
+                for(int j=0; j<takeList.size(); ++j) {
+                    vals[j]=(float)takeList.get(j).valueOf(this,s,i);
+                }
+                int index=startIndex.getValue();
+                for(int j=0; j<numElements.getValue(); ++j) {
+                    if(useParams.getValue()) {
+                        int i2=index;
+                        for(int k=0; k<numInElement.getValue(); ++k) {
+                            params[k]=getSource(0).getElement(i,s).getParam(i2);
+                            i2+=stride.getValue();
+                        }
+                    } else {
+                        int i2=index;
+                        for(int k=0; k<numInElement.getValue(); ++k) {
+                            vals[k+takeList.size()]=getSource(0).getElement(i,s).getValue(i2);
+                            i2+=stride.getValue();
+                        }
+                    }
+                    index+=step.getValue();
+                    dataVect.get(s).add(new DataElement(params,vals));
+                }
+            }
+        }
+    }
+
+    @Override
+    protected void setupSpecificPanelProperties() {
+        JPanel panel=new JPanel(new BorderLayout());
+        JPanel northPanel=new JPanel(new GridLayout(6,1));
+        northPanel.add(useParams.getCheckBox("Work with params",null));
+        northPanel.add(startIndex.getLabeledTextField("Start Index",null));
+        northPanel.add(numInElement.getLabeledTextField("Number in each element",null));
+        northPanel.add(numElements.getLabeledTextField("Number of elements to make",null));
+        northPanel.add(stride.getLabeledTextField("Stride in element",null));
+        northPanel.add(step.getLabeledTextField("Step between elements",null));
+        panel.add(northPanel,BorderLayout.NORTH);
+        JPanel centerPanel=new JPanel(new BorderLayout());
+        takeJList=new JList();
+        takeJList.setListData(takeList.toArray());
+        centerPanel.add(takeJList,BorderLayout.CENTER);
+        JPanel buttonPanel=new JPanel(new GridLayout(1,3));
+        JButton button=new JButton("Add");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                addTake();
+            }
+        });
+        buttonPanel.add(button);
+        button=new JButton("Remove");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                removeTake();
+            }
+        });
+        buttonPanel.add(button);
+        button=new JButton("Move Up");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                moveTake();
+            }
+        });
+        buttonPanel.add(button);
+        centerPanel.add(buttonPanel,BorderLayout.NORTH);
+        panel.add(centerPanel,BorderLayout.CENTER);
+        button=new JButton("Propagate Changes");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                abstractRedoAllElements();
+            }
+        });
+        panel.add(button,BorderLayout.SOUTH);
+        propPanel.addTab("Settings",panel);
+    }
+
+    @Override
+    public int getNumParameters(int stream) {
+        return ((useParams.getValue())?numInElement.getValue():0);
+    }
+
+    @Override
+    public int getNumValues(int stream) {
+        return takeList.size()+((useParams.getValue())?0:numInElement.getValue());
+    }
+
+    @Override
+    public String getParameterDescription(int stream, int which) {
+        return "Not Specified";
+    }
+
+    @Override
+    public String getValueDescription(int stream, int which) {
+        return "Not Specified";
+    }
+
+    @Override
+    public GraphElement copy(List<GraphElement> l) {
+        return new ElementSplitFilter(this,l);
+    }
+
+    @Override
+    public String getDescription() {
+        return "Element Split Filter";
+    }
+    
+    public static String getTypeDescription() {
+        return "Element Split Filter";
+    }
+    
+    private void addTake() {
+        String form=JOptionPane.showInputDialog(propPanel,"Enter the formula for the take value.");
+        if(form!=null && form.length()>0) {
+            takeList.add(new DataFormula(form));
+            takeJList.setListData(takeList.toArray());
+        }
+    }
+    
+    private void removeTake() {
+        int index=takeJList.getSelectedIndex();
+        if(index<0) {
+            JOptionPane.showMessageDialog(propPanel,"You must select an element to remove.");
+        } else {
+            takeList.remove(index);
+            takeJList.setListData(takeList.toArray());
+        }
+    }
+    
+    private void moveTake() {
+        int index=takeJList.getSelectedIndex();
+        if(index<0) {
+            JOptionPane.showMessageDialog(propPanel,"You must select an element to move.");
+        } else if(index>0) {
+            DataFormula tmp=takeList.get(index);
+            takeList.set(index,takeList.get(index-1));
+            takeList.set(index-1,tmp);
+            takeJList.setListData(takeList.toArray());
+        }        
+    }
+    
+    private EditableBoolean useParams=new EditableBoolean(false);
+    private EditableInt startIndex=new EditableInt(0);
+    private EditableInt numInElement=new EditableInt(1);
+    private EditableInt numElements=new EditableInt(1);
+    private EditableInt stride=new EditableInt(1);
+    private EditableInt step=new EditableInt(1);
+    private List<DataFormula> takeList=new ArrayList<DataFormula>();
+    
+    private transient JList takeJList;
+
+    private static final long serialVersionUID = 1432264594155410602L;
+    
+}

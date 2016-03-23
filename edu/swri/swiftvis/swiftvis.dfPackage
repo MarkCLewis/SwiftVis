@@ -1,0 +1,503 @@
+package id1ktnmdhhv6plfdhhvemwv;
+
+/**
+@version 2.0
+@physicalPackage
+@__modelType diagram 
+*/
+class diagram {
+/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.SWIFTVis:oiref><oihard>
+@__modelType reference 
+*/
+class reference {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.BinaryPositionData:oiref><oihard>
+@__modelType reference 
+*/
+class reference34 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.DiscardData:oiref><oihard>
+@__modelType reference 
+*/
+class reference35 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.EncounterData:oiref><oihard>
+@__modelType reference 
+*/
+class reference36 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.ParamDump:oiref><oihard>
+@__modelType reference 
+*/
+class reference37 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.PLDump:oiref><oihard>
+@__modelType reference 
+*/
+class reference38 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.TPDump:oiref><oihard>
+@__modelType reference 
+*/
+class reference39 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.DataSource:oiref><oihard>
+@__modelType reference 
+*/
+class reference40 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.GraphPanel:oiref><oihard>
+@__modelType reference 
+*/
+class reference41 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.GeneralData:oiref><oihard>
+@__modelType reference 
+*/
+class reference43 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.Filter:oiref><oihard>
+@__modelType reference 
+*/
+class reference44 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.SelectFilter:oiref><oihard>
+@__modelType reference 
+*/
+class reference45 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.FunctionFilter:oiref><oihard>
+@__modelType reference 
+*/
+class reference46 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.CoordConvertFilter:oiref><oihard>
+@__modelType reference 
+*/
+class reference47 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.Plot:oiref><oihard>
+@__modelType reference 
+*/
+class reference48 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.GraphElement:oiref><oihard>
+@__modelType reference 
+*/
+class reference50 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.PlotSurface:oiref><oihard>
+@__modelType reference 
+*/
+class reference51 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.DataSink:oiref><oihard>
+@__modelType reference 
+*/
+class reference52 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.DataElement:oiref><oihard>
+@__modelType reference 
+*/
+class reference53 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.TextReader:oiref><oihard>
+@__modelType reference 
+*/
+class reference54 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.BinaryInputStream:oiref><oihard>
+@__modelType reference 
+*/
+class reference55 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.OptionsData:oiref><oihard>
+@__modelType reference 
+*/
+class reference56 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.PlotSpec:oiref><oihard>
+@__modelType reference 
+*/
+class reference57 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.PlotObject:oiref><oihard>
+@__modelType reference 
+*/
+class reference58 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.ToolCreator:oiref><oihard>
+@__modelType reference 
+*/
+class reference59 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.MovieFilter:oiref><oihard>
+@__modelType reference 
+*/
+class reference60 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.PlotFrame:oiref><oihard>
+@__modelType reference 
+*/
+class reference1 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.PlotText:oiref><oihard>
+@__modelType reference 
+*/
+class reference2 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.AxisOptions:oiref><oihard>
+@__modelType reference 
+*/
+class reference6 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.FontOptions:oiref><oihard>
+@__modelType reference 
+*/
+class reference7 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.PlotArea2D:oiref><oihard>
+@__modelType reference 
+*/
+class reference8 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.DataPlotStyle:oiref><oihard>
+@__modelType reference 
+*/
+class reference9 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.ScatterStyle:oiref><oihard>
+@__modelType reference 
+*/
+class reference10 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.OrbitStyle:oiref><oihard>
+@__modelType reference 
+*/
+class reference11 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.BarStyle:oiref><oihard>
+@__modelType reference 
+*/
+class reference12 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.NumberFormatter:oiref><oihard>
+@__modelType reference 
+*/
+class reference3 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.GraphicsTester:oiref><oihard>
+@__modelType reference 
+*/
+class reference5 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.DataFormula:oiref><oihard>
+@__modelType reference 
+*/
+class reference14 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.HistogramFilter:oiref><oihard>
+@__modelType reference 
+*/
+class reference4 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.ResonanceFilter:oiref><oihard>
+@__modelType reference 
+*/
+class reference13 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.FillOptions:oiref><oihard>
+@__modelType reference 
+*/
+class reference17 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.FillUser:oiref><oihard>
+@__modelType reference 
+*/
+class reference18 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.FontUser:oiref><oihard>
+@__modelType reference 
+*/
+class reference19 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.ColorIndicator:oiref><oihard>
+@__modelType reference 
+*/
+class reference20 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.BooleanFormula:oiref><oihard>
+@__modelType reference 
+*/
+class reference21 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.SourceInfoPanel:oiref><oihard>
+@__modelType reference 
+*/
+class reference33 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.SourceTableModel:oiref><oihard>
+@__modelType reference 
+*/
+class reference42 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.BinnedSurface:oiref><oihard>
+@__modelType reference 
+*/
+class reference15 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.AveragedStreamlines:oiref><oihard>
+@__modelType reference 
+*/
+class reference16 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.AveragedSurface:oiref><oihard>
+@__modelType reference 
+*/
+class reference22 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.SpecialFormatReader:oiref><oihard>
+@__modelType reference 
+*/
+class reference24 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.PreviewTableModel:oiref><oihard>
+@__modelType reference 
+*/
+class reference23 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.PlottingHelper:oiref><oihard>
+@__modelType reference 
+*/
+class reference25 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.ColorGradient:oiref><oihard>
+@__modelType reference 
+*/
+class reference26 {
+}/**
+@__ref <oiref:java#Class#edu.swri.swiftvis.GradientUser:oiref><oihard>
+@__modelType reference 
+*/
+class reference72 {
+}}/**
+@__tags
+@shapeType ClassDiagram 
+*/
+class __tags {
+}/**
+@__options 
+*/
+class __options {
+}/**
+@__positions <oigroup:<oiref:java#Class#edu.swri.swiftvis.TextReader:oiref>=179,1480,154,366,1:oigroup>
+<oigroup:<oiref:java#Member#edu.swri.swiftvis.SelectFilter#sourceAltered#(#edu.swri.swiftvis.DataSource#)#:oiref>=1821,1270,178,16,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AxisOptions#fillOptions:oiref>=3990,2005,3156,1953:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.OrNode:oiref>=5331,2013,168,142,1:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.AveragedSurface#edu.swri.swiftvis.DataPlotStyle:oiref>=5370,1930,4570,1871:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.NotNode#edu.swri.swiftvis.BoolNode:oiref>=5141,1739,5141,1973:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AxisOptions#axisFill:oiref>=3990,2005,3156,1953:oigroup>
+<oigroup:<oiref:java#Member#edu.swri.swiftvis.GeneralData#removeOutput#(#edu.swri.swiftvis.DataSink#)#:oiref>=931,890,178,16,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AxisOptions#plotArea:oiref>=3990,1902,3960,1902:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.SpecialFormatReader#tReader:oiref>=723,1444,256,1480:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.PlotText#fontOpts:oiref>=3695,1592,3462,1760:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.TPDump:oiref>=1010,1380,200,318,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.OrNode#left:oiref>=5331,2082,5299,2082:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AveragedSurface#colorGradients:oiref>=5336,2440,4977,2598:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.DataPlotStyle:oiref>=4389,1690,195,181,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.XorNode#right:oiref>=5405,1925,5235,1973:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.ColorNode:oiref>=4834,2726,91,110,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.GraphPanel#mainFrame:oiref>=321,712,321,750:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.EqualsNode#edu.swri.swiftvis.BoolNode:oiref>=5565,2173,5269,2106:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.PlotSurface:oiref>=3559,389,138,142,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.BinaryPositionData:oiref>=1351,761,200,430,1:oigroup>
+<oigroup:<oiref:java#Member#edu.swri.swiftvis.ScatterStyle#redoBounds#(##)#:oiref>=4230,2110,178,16,1:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.FunctionFilter#edu.swri.swiftvis.Filter:oiref>=2200,1013,2200,829:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AveragedSurface#plotArea:oiref>=5270,1980,3960,1980:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AxisOptions#fontOptions:oiref>=3990,1965,3546,1965:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.CoordConvertFilter:oiref>=2240,1013,200,462,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.HistogramFilter:oiref>=2561,1008,99,82,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.NotNode:oiref>=5021,1613,168,126,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AveragedStreamlines#XFormula:oiref>=5030,2047,2694,2047:oigroup>
+<oigroup:<oiref:java#Member#edu.swri.swiftvis.AveragedSurface#applyGradient#(#edu.swri.swiftvis.ColorGradient#)#:oiref>=5290,2189,178,16,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.SelectFilter#formula:oiref>=1937,1587,2372,1750:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.BinaryInputStream:oiref>=20,1490,136,254,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.SWIFTVis#options:oiref>=270,869,191,869:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AxisOptions#fontSelect:oiref>=3770,1936,3546,1936:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.SelectFilter#sip:oiref>=1868,1587,1723,2070:oigroup>
+<oigroup:BeanProperty#<oiref:java#Member#edu.swri.swiftvis.SelectFilter#getNumSources1#(##)#:oiref>=1967,1414,0,0,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.SourceInfoPanel:oiref>=1691,2070,161,206,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.LTNode:oiref>=5501,1603,168,142,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AveragedStreamlines#yFormula:oiref>=5030,2118,2694,2118:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.ScatterStyle#edu.swri.swiftvis.FillUser:oiref>=4230,1930,2880,1893:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AveragedStreamlines#phiFormula:oiref>=5030,1960,2694,1960:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AveragedSurface#columnMatch:oiref>=5270,1999,2694,2002:oigroup>
+<oigroup:<oiref:java#Extends#edu.swri.swiftvis.DataSource#edu.swri.swiftvis.GraphElement:oiref>=1330,380,1664,214:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.GraphElement:oiref>=1610,20,195,194,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.SpecialFormatReader#bis:oiref>=659,1444,88,1490:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.OrNode#right:oiref>=5331,2059,5299,2059:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.PlotArea2D#parent:oiref>=3760,1252,3514,1252:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.SWIFTVis#graphPanel:oiref>=371,750,371,712:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.LTNode#edu.swri.swiftvis.BoolNode:oiref>=5585,1745,5193,1973:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.ScatterStyle:oiref>=4210,1930,200,478,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AveragedSurface#YFormula:oiref>=5270,2080,2694,2080:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.FillOptions:oiref>=3010,1760,146,222,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.FontUser:oiref>=3236,1763,101,101,1:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.PlotArea2D#edu.swri.swiftvis.FillUser:oiref>=3760,1788,2970,1788:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.SpecialFormatReader#data:oiref>=787,1054,900,1054:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.ScatterStyle#xFormula:oiref>=4405,2079,4920,2079:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.FillOptions#user:oiref>=3010,1826,2970,1826:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.DiscardData:oiref>=1131,761,200,382,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.DataSource:oiref>=1230,380,200,261,1:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.BarStyle#edu.swri.swiftvis.DataPlotStyle:oiref>=4727,1930,4529,1871:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.GeneralData#edu.swri.swiftvis.DataSource:oiref>=1000,760,1250,641:oigroup>
+<oigroup:Composite#supplierCardinality#MemberLink#<oiref:java#Member#edu.swri.swiftvis.AveragedSurface#xFormula:oiref>=2698,1966,26,16,0:oigroup>
+<oigroup:Composite#supplierCardinality#MemberLink#<oiref:java#Member#edu.swri.swiftvis.AveragedSurface#colorFormula:oiref>=2698,2010,26,16,0:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.ColorGradient:oiref>=4877,2598,200,430,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.PlotFrame:oiref>=3239,381,140,206,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.AveragedSurface:oiref>=5270,1930,200,510,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.AveragedStreamlines:oiref>=5030,1931,200,398,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AveragedSurface#eFormula:oiref>=5270,2030,2694,2030:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.AxisOptions#edu.swri.swiftvis.FillUser:oiref>=3990,1995,2970,1867:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.PlotFrame#spec:oiref>=3349,587,3349,1050:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.PLDump:oiref>=1490,1380,200,318,1:oigroup>
+<oigroup:<oiref:java#Member#edu.swri.swiftvis.PlotText#nodeSelected#(##)#:oiref>=3559,1261,173,16,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.EncounterData:oiref>=1571,761,200,382,1:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.GTNode#edu.swri.swiftvis.BoolNode:oiref>=5405,1765,5172,1973:oigroup>
+<oigroup:<oiref:java#Member#edu.swri.swiftvis.PlotArea2D#forceRedraw#(##)#:oiref>=3760,1540,173,16,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.GTENode:oiref>=5501,1763,168,142,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.GraphPanel:oiref>=249,10,200,702,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.ParamDump:oiref>=1250,1380,200,318,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.FontOptions:oiref>=3379,1760,167,238,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.GTNode#left:oiref>=5321,1755,5104,1760:oigroup>
+<oigroup:<oiref:java#Member#edu.swri.swiftvis.PlotArea2D#drawToGraphics#(#java.awt.Graphics2D#java.awt.geom.Rectangle2D#)#:oiref>=3780,1480,173,16,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AxisOptions#plotObject:oiref>=4070,1890,3906,989:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.BinnedSurface:oiref>=4835,1931,96,82,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.ScatterStyle#secondaryFormula:oiref>=4210,2128,2694,2128:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.BarStyle:oiref>=4630,1930,195,149,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.PlotSpec#plot:oiref>=3319,1133,3085,1133:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.GeneralData:oiref>=900,760,200,558,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.OrbitStyle:oiref>=4420,1930,195,149,1:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.AveragedSurface#edu.swri.swiftvis.GradientUser:oiref>=5403,2440,5166,2599:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AveragedSurface#phiFormula:oiref>=5270,2181,2694,2181:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.GTENode#left:oiref>=5501,1834,5104,1834:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.XorNode#left:oiref>=5447,1925,5256,1973:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.OrNode#edu.swri.swiftvis.BoolNode:oiref>=5331,2036,5299,2036:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.Plot#sip:oiref>=2987,1466,1819,2070:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.PlotSurface#spec:oiref>=3628,531,3381,1050:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.FunctionFilter:oiref>=2020,1013,200,782,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AveragedStreamlines#plotArea:oiref>=5030,1941,3960,1940:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.BooleanFormula:oiref>=2311,1750,184,414,1:oigroup>
+<oigroup:<oiref:java#Extends#edu.swri.swiftvis.Filter#edu.swri.swiftvis.DataSink:oiref>=2225,731,2103,577:oigroup>
+<oigroup:<oiref:java#Member#edu.swri.swiftvis.PlotSpec#forceRedraw#(##)#:oiref>=3330,1209,173,16,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.SWIFTVis:oiref>=270,750,151,286,1:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.PlotText#edu.swri.swiftvis.PlotObject:oiref>=3636,1050,3798,989:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AveragedStreamlines#eFormula:oiref>=5030,1986,2694,1986:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.LTENode:oiref>=5301,2173,168,142,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.DataFormula:oiref>=2510,1750,184,510,1:oigroup>
+<oigroup:<oiref:java#Member#edu.swri.swiftvis.PlotText#forceRedraw#(##)#:oiref>=3550,1311,173,16,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AveragedStreamlines#YFormula:oiref>=5030,2018,2694,2018:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.OptionsData:oiref>=10,750,197,318,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.PlottingHelper:oiref>=4679,2595,113,117,1:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.BinaryPositionData#edu.swri.swiftvis.DataSource:oiref>=1370,761,1370,641:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.LTENode#left:oiref>=5301,2226,5104,2226:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.SelectFilter:oiref>=1800,1013,200,574,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.PlotArea2D:oiref>=3760,1050,200,1278,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.EqualsNode#left:oiref>=5481,2216,5104,2216:oigroup>
+<oigroup:<oiref:java#Class#FillSettings:oiref>=3130,1761,176,238,1:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.ScatterStyle#edu.swri.swiftvis.DataPlotStyle:oiref>=4251,1930,4431,1871:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.DataSink:oiref>=2040,380,161,197,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.ScatterStyle#sizeFormula:oiref>=4210,2062,2694,2062:oigroup>
+<oigroup:<oiref:java#Class#EquationParser:oiref>=4843,1714,181,478,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.SourceTableModel#source:oiref>=1593,2070,1385,641:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.AveragedStreamlines#edu.swri.swiftvis.DataPlotStyle:oiref>=5130,1931,4556,1871:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.SpecialFormatReader:oiref>=596,806,191,638,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.ScatterStyle#yFormula:oiref>=4405,2041,4920,2041:oigroup>
+<oigroup:Composite#supplierCardinality#MemberLink#<oiref:java#Member#edu.swri.swiftvis.AveragedSurface#yFormula:oiref>=2698,1988,26,16,0:oigroup>
+<oigroup:<oiref:java#Extends#edu.swri.swiftvis.DataSink#edu.swri.swiftvis.GraphElement:oiref>=2120,380,1718,214:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.LTENode#edu.swri.swiftvis.BoolNode:oiref>=5385,2173,5239,2106:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.ScatterStyle#fillOptions:oiref>=4210,1940,3156,1940:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.ColorGradient#user:oiref>=5077,2649,5104,2649:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.ScatterStyle#primaryFormula:oiref>=4210,2194,2694,2194:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.AxisOptions:oiref>=3990,1890,200,894,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.PreviewTableModel:oiref>=771,1490,162,222,1:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.GTENode#edu.swri.swiftvis.BoolNode:oiref>=5585,1905,5277,1973:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AveragedSurface#xFormula:oiref>=5270,1990,2694,1986:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.MovieFilter:oiref>=2460,1010,83,82,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.PlotObject:oiref>=3760,760,195,229,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.PlotText#font:oiref>=3557,1496,3557,1651:oigroup>
+<oigroup:<oiref:design#Class#id2t9bmdg8c1zvxdg8c4om5.diagram:oiref>=1154,1510,126,500,1:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.SelectFilter#edu.swri.swiftvis.Filter:oiref>=1900,1013,2185,829:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.GraphPanel#selected:oiref>=449,117,1610,117:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.PlotText#edu.swri.swiftvis.FillUser:oiref>=3578,1592,2880,1760:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AveragedSurface#columnMatchFormula:oiref>=5270,1999,2694,2002:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.ScatterStyle#colorFormula:oiref>=4210,1996,2694,1996:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.Plot#spec:oiref>=3085,1217,3319,1217:oigroup>
+<oigroup:<oiref:java#Member#edu.swri.swiftvis.PlotSpec#treeAltered#(##)#:oiref>=3379,1410,142,16,1:oigroup>
+<oigroup:<oiref:java#Member#edu.swri.swiftvis.AxisOptions#VERTICAL_AXIS:oiref>=3830,1790,173,16,1:oigroup>
+<oigroup:<oiref:java#Member#edu.swri.swiftvis.AxisOptions#HORIZONTAL_AXIS:oiref>=3830,1806,173,16,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.PlotSpec:oiref>=3319,1050,195,430,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.ScatterStyle#plotArea:oiref>=4210,1950,3960,1950:oigroup>
+<oigroup:Composite#supplierCardinality#MemberLink#<oiref:java#Member#edu.swri.swiftvis.AveragedSurface#colorGradients:oiref>=4947,2578,26,16,0:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.XorNode:oiref>=5321,1783,168,142,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.ColorIndicator:oiref>=2790,1910,196,414,1:oigroup>
+<oigroup:<oiref:java#Member#edu.swri.swiftvis.PlotText#treeAltered#(##)#:oiref>=3570,1459,142,16,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.GTNode:oiref>=5321,1623,168,142,1:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.AxisOptions#edu.swri.swiftvis.FontUser:oiref>=3990,1955,3337,1844:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.PlotText#fillOpts:oiref>=3617,1592,3083,1760:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.GradientChooser:oiref>=4935,2727,108,98,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.DataElement:oiref>=710,400,170,286,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AndNode#right:oiref>=5183,2143,5183,2106:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.Filter:oiref>=2170,731,83,98,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.GradientUser:oiref>=5104,2599,124,101,1:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.XorNode#edu.swri.swiftvis.BoolNode:oiref>=5363,1925,5214,1973:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.SpecialFormatReader#treader:oiref>=723,1364,256,1480:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.OrbitStyle#edu.swri.swiftvis.DataPlotStyle:oiref>=4474,1930,4474,1871:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AndNode#left:oiref>=5209,2143,5209,2106:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.GraphicsTester:oiref>=2069,2200,170,174,1:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.CoordConvertFilter#edu.swri.swiftvis.Filter:oiref>=2340,1013,2226,829:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.Plot:oiref>=2890,1020,195,446,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.SourceTableModel:oiref>=1510,2070,167,190,1:oigroup>
+<oigroup:<oiref:java#Member#edu.swri.swiftvis.SelectFilter#removeInput#(#edu.swri.swiftvis.DataSource#)#:oiref>=1810,1179,178,16,1:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.Plot#edu.swri.swiftvis.DataSink:oiref>=2952,1020,2152,577:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.DiscardData#edu.swri.swiftvis.DataSource:oiref>=1270,761,1270,641:oigroup>
+<oigroup:<oiref:java#Extends#edu.swri.swiftvis.Filter#edu.swri.swiftvis.DataSource:oiref>=2197,731,1415,641:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.PlotText#parent:oiref>=3539,1247,3514,1247:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.BoolNode:oiref>=5131,1973,168,133,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.FunctionFilter#sip:oiref>=2120,1795,1787,2070:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.LTNode#left:oiref>=5501,1717,5104,1796:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.PlotFrame#surface:oiref>=3379,451,3559,451:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.GeneralData#sfr:oiref>=900,1186,787,1186:oigroup>
+<oigroup:<oiref:java#Member#edu.swri.swiftvis.PlotSpec#nodeSelected#(##)#:oiref>=3330,1210,173,16,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AveragedStreamlines#xFormula:oiref>=5030,2040,2694,2040:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.FillUser:oiref>=2790,1760,180,133,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.ResonanceFilter:oiref>=2680,1010,104,82,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.NotNode#arg:oiref>=5151,1739,5151,1973:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.FontOptions#user:oiref>=3379,1813,3337,1813:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AxisOptions#dataUsed:oiref>=4190,1930,4389,1835:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AveragedSurface#XFormula:oiref>=5270,2138,2694,2138:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.PlotSpec#edu.swri.swiftvis.PlotObject:oiref>=3447,1050,3779,989:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.ColorIndicator#nextInGroup:oiref>=2947,2324,2947,2373,3035,2373,3035,2285,2986,2285:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.AndNode:oiref>=5121,2143,168,142,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.Plot#plotFrame:oiref>=3018,1020,3294,587:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.DataElement#source:oiref>=880,512,1230,512:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.EncounterData#edu.swri.swiftvis.DataSource:oiref>=1671,761,1400,641:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.FunctionFilter#formula:oiref>=2120,1523,5012,1750:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AveragedSurface#yFormula:oiref>=5270,2008,2694,2008:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AxisOptions#fontOpts:oiref>=3990,1915,3546,1915:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.EqualsNode:oiref>=5481,2173,168,142,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.NumberFormatter:oiref>=3239,2230,138,149,1:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.PlotText:oiref>=3539,1050,195,542,1:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.SourceInfoPanel#sink:oiref>=1755,2070,2071,577:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.AndNode#edu.swri.swiftvis.BoolNode:oiref>=5157,2143,5157,2106:oigroup>
+<oigroup:MemberLink#<oiref:java#Member#edu.swri.swiftvis.AveragedSurface#colorFormula:oiref>=5270,2030,2694,2030:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.ToolCreator:oiref>=2929,179,83,82,1:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.PlotText#edu.swri.swiftvis.FontUser:oiref>=3656,1592,3286,1763:oigroup>
+<oigroup:<oiref:java#Class#edu.swri.swiftvis.PlotAreaMiniature:oiref>=3752,1365,176,190,1:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.PlotArea2D#edu.swri.swiftvis.PlotObject:oiref>=3857,1050,3857,989:oigroup>
+<oigroup:<oiref:java#Implements#edu.swri.swiftvis.Plot#edu.swri.swiftvis.Plot:oiref>=2922,1020,2922,861:oigroup>
+
+*/
+class __positions {
+}

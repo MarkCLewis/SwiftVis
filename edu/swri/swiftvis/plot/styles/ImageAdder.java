@@ -1,0 +1,675 @@
+/*
+ * Created on Jun 4, 2004
+ *
+ * To change the template for this generated file go to
+ * Window&gt;Preferences&gt;Java&gt;Code Generation&gt;Code and Comments
+ */
+package edu.swri.swiftvis.plot.styles;
+
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Frame;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
+import java.awt.geom.Point2D;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.ArrayList;
+
+import javax.imageio.ImageIO;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JColorChooser;
+import javax.swing.JComponent;
+import javax.swing.JDialog;
+import javax.swing.JFileChooser;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextField;
+
+import edu.swri.swiftvis.plot.DataPlotStyle;
+import edu.swri.swiftvis.plot.PlotArea2D;
+import edu.swri.swiftvis.plot.PlotLegend;
+import edu.swri.swiftvis.plot.PlotTransform;
+import edu.swri.swiftvis.plot.util.ColorGradient;
+import edu.swri.swiftvis.plot.util.PlottingHelper;
+
+/**
+ * The purpose of this class is to add an image into a plot.  The image will be scaled appropriately
+ * for the bounds on the plot and the user can sepcify the location and size of the image itself.  I'm
+ * creating this largely so that I have an easy way to put axes on the PNG plots that are created by
+ * the ring analysis program.
+ *  * @author mlewis
+ */
+public final class ImageAdder implements DataPlotStyle {
+	public ImageAdder(PlotArea2D pa) {
+		plotArea=pa;
+		double[] bounds={0,255};
+		redGradient=new ColorGradient(Color.black,Color.red);
+		redGradient.setBounds(bounds);
+		greenGradient=new ColorGradient(Color.black,Color.green);
+		greenGradient.setBounds(bounds);
+		blueGradient=new ColorGradient(Color.black,Color.blue);
+		blueGradient.setBounds(bounds);
+	}
+    
+    public ImageAdder(ImageAdder c,PlotArea2D pa) {
+        plotArea=pa;
+        imageFile=c.imageFile;
+        minX=c.minX;
+        maxY=c.maxY;
+        sizeX=c.sizeX;
+        sizeY=c.sizeY;
+        clipX=c.clipX;
+        clipY=c.clipY;
+        clipSizeX=c.clipSizeX;
+        clipSizeY=c.clipSizeY;
+        for(SwapPair sp:c.colorSwaps) {
+            colorSwaps.add(new SwapPair(sp));
+        }
+        redGradient=new ColorGradient(c.redGradient);
+        greenGradient=new ColorGradient(c.greenGradient);
+        blueGradient=new ColorGradient(c.blueGradient);
+    }
+	
+	public static String getTypeDescription() {
+		return "Image Adder";
+	}
+	
+	@Override
+    public String toString() {
+		if(imageFile==null) return "Image - no image";
+		return "Image - "+imageFile.getName();
+	}
+
+	/**
+	 * This method return the bounds the user input.
+	 * @see edu.swri.swiftvis.plot.DataPlotStyle#getBounds()
+	 */
+	@Override
+    public double[][] getBounds() {
+		double[][] ret={{minX,minX+sizeX},{maxY-sizeY,maxY}};
+		return ret;
+	}
+
+	/**
+	 * This method does nothing as the bounds are user inputs.
+	 * @see edu.swri.swiftvis.plot.DataPlotStyle#redoBounds()
+	 */
+	@Override
+    public void redoBounds() {
+	}
+
+    @Override
+    public PlotLegend getLegendInformation() {
+        return null;
+    }
+
+	/**
+	 * Returns a panel in which the user can specify the parameters of the image.
+	 * @see edu.swri.swiftvis.plot.DataPlotStyle#getPropertiesPanel()
+	 */
+	@Override
+    public JComponent getPropertiesPanel() {
+		if(propPanel==null) {
+			propPanel=new JPanel(new BorderLayout());
+			JButton button=new JButton("Select Image File");
+			button.addActionListener(new ActionListener() {
+				@Override
+                public void actionPerformed(ActionEvent e) { 
+					JFileChooser chooser=new JFileChooser();
+					if(chooser.showOpenDialog(propPanel)==JFileChooser.APPROVE_OPTION) {
+						imageFile=chooser.getSelectedFile();
+						imageRead=false;
+						try {
+							loadImage();
+						} catch(IOException ex) {
+							JOptionPane.showMessageDialog(propPanel,"There was an error reading that file.");
+						}
+					}
+				}
+			} );
+			propPanel.add(button,BorderLayout.NORTH);
+			
+			Box box=new Box(BoxLayout.Y_AXIS);
+			JPanel plotCoordPanel=new JPanel(new GridLayout(2,2));
+			plotCoordPanel.setBorder(BorderFactory.createTitledBorder("Plot Coordinates"));
+			JPanel tmpPanel=new JPanel(new BorderLayout());
+			tmpPanel.add(new JLabel("Min X"),BorderLayout.WEST);
+			JTextField field=new JTextField(Double.toString(minX));
+			field.addActionListener(new ActionListener() {
+				@Override
+                public void actionPerformed(ActionEvent e) { setMinX((JTextField)e.getSource()); }
+			} );
+			field.addFocusListener(new FocusAdapter() {
+				@Override
+                public void focusLost(FocusEvent e) { setMinX((JTextField)e.getSource()); }
+			} );
+			tmpPanel.add(field,BorderLayout.CENTER);
+			plotCoordPanel.add(tmpPanel);
+			tmpPanel=new JPanel(new BorderLayout());
+			tmpPanel.add(new JLabel("Max Y"),BorderLayout.WEST);
+			field=new JTextField(Double.toString(maxY));
+			field.addActionListener(new ActionListener() {
+				@Override
+                public void actionPerformed(ActionEvent e) { setMaxY((JTextField)e.getSource()); }
+			} );
+			field.addFocusListener(new FocusAdapter() {
+				@Override
+                public void focusLost(FocusEvent e) { setMaxY((JTextField)e.getSource()); }
+			} );
+			tmpPanel.add(field,BorderLayout.CENTER);
+			plotCoordPanel.add(tmpPanel);
+			tmpPanel=new JPanel(new BorderLayout());
+			tmpPanel.add(new JLabel("Width"),BorderLayout.WEST);
+			field=new JTextField(Double.toString(sizeX));
+			field.addActionListener(new ActionListener() {
+				@Override
+                public void actionPerformed(ActionEvent e) { setSizeX((JTextField)e.getSource()); }
+			} );
+			field.addFocusListener(new FocusAdapter() {
+				@Override
+                public void focusLost(FocusEvent e) { setSizeX((JTextField)e.getSource()); }
+			} );
+			tmpPanel.add(field,BorderLayout.CENTER);
+			plotCoordPanel.add(tmpPanel);
+			tmpPanel=new JPanel(new BorderLayout());
+			tmpPanel.add(new JLabel("Height"),BorderLayout.WEST);
+			field=new JTextField(Double.toString(sizeY));
+			field.addActionListener(new ActionListener() {
+				@Override
+                public void actionPerformed(ActionEvent e) { setSizeY((JTextField)e.getSource()); }
+			} );
+			field.addFocusListener(new FocusAdapter() {
+				@Override
+                public void focusLost(FocusEvent e) { setSizeY((JTextField)e.getSource()); }
+			} );
+			tmpPanel.add(field,BorderLayout.CENTER);
+			plotCoordPanel.add(tmpPanel);
+			box.add(plotCoordPanel);
+
+			JPanel imageCoordPanel=new JPanel(new GridLayout(2,2));
+			imageCoordPanel.setBorder(BorderFactory.createTitledBorder("Image Coordinates"));
+			tmpPanel=new JPanel(new BorderLayout());
+			tmpPanel.add(new JLabel("Min X"),BorderLayout.WEST);
+			field=new JTextField(Integer.toString(clipX));
+			field.addActionListener(new ActionListener() {
+				@Override
+                public void actionPerformed(ActionEvent e) { setClipX((JTextField)e.getSource()); }
+			} );
+			field.addFocusListener(new FocusAdapter() {
+				@Override
+                public void focusLost(FocusEvent e) { setClipX((JTextField)e.getSource()); }
+			} );
+			tmpPanel.add(field,BorderLayout.CENTER);
+			imageCoordPanel.add(tmpPanel);
+			tmpPanel=new JPanel(new BorderLayout());
+			tmpPanel.add(new JLabel("Min Y"),BorderLayout.WEST);
+			field=new JTextField(Integer.toString(clipY));
+			field.addActionListener(new ActionListener() {
+				@Override
+                public void actionPerformed(ActionEvent e) { setClipY((JTextField)e.getSource()); }
+			} );
+			field.addFocusListener(new FocusAdapter() {
+				@Override
+                public void focusLost(FocusEvent e) { setClipY((JTextField)e.getSource()); }
+			} );
+			tmpPanel.add(field,BorderLayout.CENTER);
+			imageCoordPanel.add(tmpPanel);
+			tmpPanel=new JPanel(new BorderLayout());
+			tmpPanel.add(new JLabel("Width"),BorderLayout.WEST);
+			field=new JTextField(Integer.toString(clipSizeX));
+			field.addActionListener(new ActionListener() {
+				@Override
+                public void actionPerformed(ActionEvent e) { setClipSizeX((JTextField)e.getSource()); }
+			} );
+			field.addFocusListener(new FocusAdapter() {
+				@Override
+                public void focusLost(FocusEvent e) { setClipSizeX((JTextField)e.getSource()); }
+			} );
+			tmpPanel.add(field,BorderLayout.CENTER);
+			imageCoordPanel.add(tmpPanel);
+			tmpPanel=new JPanel(new BorderLayout());
+			tmpPanel.add(new JLabel("Height"),BorderLayout.WEST);
+			field=new JTextField(Integer.toString(clipSizeY));
+			field.addActionListener(new ActionListener() {
+				@Override
+                public void actionPerformed(ActionEvent e) { setClipSizeY((JTextField)e.getSource()); }
+			} );
+			field.addFocusListener(new FocusAdapter() {
+				@Override
+                public void focusLost(FocusEvent e) { setClipSizeY((JTextField)e.getSource()); }
+			} );
+			tmpPanel.add(field,BorderLayout.CENTER);
+			imageCoordPanel.add(tmpPanel);
+			box.add(imageCoordPanel);
+			
+			JPanel swapPanel=new JPanel(new BorderLayout());
+			swapPanel.setBorder(BorderFactory.createTitledBorder("Color Swaps"));
+			final JList swapList=new JList(colorSwaps.toArray());
+			swapPanel.add(swapList,BorderLayout.CENTER);
+			tmpPanel=new JPanel(new GridLayout(2,2));
+			button=new JButton("Add Color Swap");
+			button.addActionListener(new ActionListener() {
+				@Override
+                public void actionPerformed(ActionEvent e) {
+					colorSwaps.add(new SwapPair(Color.black,Color.white));
+					swapList.setListData(colorSwaps.toArray());
+				}
+			} );
+			tmpPanel.add(button);
+			button=new JButton("Remove Color Swap");
+			button.addActionListener(new ActionListener() {
+				@Override
+                public void actionPerformed(ActionEvent e) {
+					int sel=swapList.getSelectedIndex();
+					if(sel<0) {
+						JOptionPane.showMessageDialog((JButton)e.getSource(),"You must select a swap to remove.");
+						return;
+					} 
+					colorSwaps.remove(sel);
+					swapList.setListData(colorSwaps.toArray());
+				}
+			} );
+			tmpPanel.add(button);
+			button=new JButton("Pick Start Color For Swap");
+			button.addActionListener(new ActionListener() {
+				@Override
+                public void actionPerformed(ActionEvent e) {
+					int sel=swapList.getSelectedIndex();
+					if(sel<0) {
+						JOptionPane.showMessageDialog((JButton)e.getSource(),"You must select a swap to alter.");
+						return;
+					}
+					try { 
+						loadImage();
+					} catch(IOException ex) {
+						ex.printStackTrace();
+					}
+					colorSwaps.get(sel).pickFrom();
+					swapList.setListData(colorSwaps.toArray());
+				}
+			} );
+			tmpPanel.add(button);
+			button=new JButton("Pick End Color For Swap");
+			button.addActionListener(new ActionListener() {
+				@Override
+                public void actionPerformed(ActionEvent e) {
+					int sel=swapList.getSelectedIndex();
+					if(sel<0) {
+						JOptionPane.showMessageDialog((JButton)e.getSource(),"You must select a swap to alter.");
+						return;
+					} 
+					try { 
+						loadImage();
+					} catch(IOException ex) {
+						ex.printStackTrace();
+					}
+					colorSwaps.get(sel).pickTo();
+					swapList.setListData(colorSwaps.toArray());
+				}
+			} );
+			tmpPanel.add(button);
+			swapPanel.add(tmpPanel,BorderLayout.SOUTH);
+			swapPanel.setPreferredSize(new Dimension(500,200));
+			box.add(swapPanel);
+			
+			JPanel gradPanel=new JPanel(new GridLayout(1,3));
+			gradPanel.setBorder(BorderFactory.createTitledBorder("Additive Color Gradients"));
+			button=new JButton("Edit Red Gradient");
+			button.addActionListener(new ActionListener() {
+				@Override
+                public void actionPerformed(ActionEvent e) {
+					redGradient.edit();
+				}
+			} );
+			gradPanel.add(button);
+			button=new JButton("Edit Green Gradient");
+			button.addActionListener(new ActionListener() {
+				@Override
+                public void actionPerformed(ActionEvent e) {
+					greenGradient.edit();
+				}
+			} );
+			gradPanel.add(button);
+			button=new JButton("Edit Blue Gradient");
+			button.addActionListener(new ActionListener() {
+				@Override
+                public void actionPerformed(ActionEvent e) {
+					blueGradient.edit();
+				}
+			} );
+			gradPanel.add(button);
+			box.add(gradPanel);
+			propPanel.add(box,BorderLayout.CENTER);
+			
+
+			button=new JButton("Refresh Plot");
+			button.addActionListener(new ActionListener() {
+				@Override
+                public void actionPerformed(ActionEvent e) { plotArea.fireRedraw(); }
+			} );
+			propPanel.add(button,BorderLayout.SOUTH);
+		}
+		return propPanel;
+	}
+
+	/**
+	 * Creates a transform and draws the image using it.
+	 * @see edu.swri.swiftvis.plot.DataPlotStyle#drawToGraphics(java.awt.Graphics2D, double, double)
+	 */
+	@Override
+    public void drawToGraphics(Graphics2D g,PlotTransform t) {
+		if(img==null) {
+			try {
+				loadImage();
+			} catch(IOException e) {
+				e.printStackTrace();
+			}
+		} 
+        Point2D p=t.transform(minX,maxY);
+        double width=t.scaledPrimary(sizeX);
+        double height=t.scaledSecondary(sizeY);
+		g.drawImage(img,(int)p.getX(),(int)p.getY(),(int)width,(int)height,null);
+	}
+	
+    @Override
+    public ImageAdder copy(PlotArea2D pa) {
+        return new ImageAdder(this,pa);
+    }
+    
+/*	public void applyGradient(ColorGradient cg) {
+		try {
+			imageColored=false;
+			loadImage();
+		} catch(IOException e) {
+			e.printStackTrace();
+		}
+	}
+*/
+	private void loadImage() throws IOException {
+		if(imageFile==null) {
+			img=new BufferedImage(10,10,BufferedImage.TYPE_INT_ARGB);
+		} else {
+			if(fullImage==null || !imageRead) {
+				originalImage=ImageIO.read(imageFile);
+				imageRead=true;
+				imageColored=false;
+			}
+			if(!imageColored) {
+				fullImage=new BufferedImage(originalImage.getWidth(),originalImage.getHeight(),
+					BufferedImage.TYPE_INT_ARGB);
+				for(int i=0; i<fullImage.getWidth(); ++i) {
+					for(int j=0; j<fullImage.getHeight(); ++j) {
+						boolean swapped=false;
+						int cur=originalImage.getRGB(i,j);
+						for(int k=0; k<colorSwaps.size() && !swapped; ++k) {
+							SwapPair sp=colorSwaps.get(k);
+							if(sp.from==cur) {
+								fullImage.setRGB(i,j,sp.to);
+								swapped=true;
+							}
+						}
+						if(!swapped) {
+							Color toColor=PlottingHelper.mixColors(redGradient.getColor((cur>>16) & 0xff),
+								greenGradient.getColor((cur>>8) & 0xff),blueGradient.getColor(cur & 0xff));
+							fullImage.setRGB(i,j,toColor.getRGB());
+						}
+					}
+				}
+				imageColored=true;
+			} 
+			if(img==null || img.getWidth()!=clipSizeX || img.getHeight()!=clipSizeY) {
+				img=new BufferedImage(clipSizeX,clipSizeY,BufferedImage.TYPE_INT_ARGB);
+			}
+			Graphics2D g=img.createGraphics();
+			g.drawImage(fullImage,-clipX,-clipY,null);
+		}
+		plotArea.fireRedraw();
+	}
+	
+	private void setMinX(JTextField field) {
+		try {
+			minX=Double.parseDouble(field.getText());
+			plotArea.forceRedraw();
+			plotArea.fireRedraw();
+		} catch(NumberFormatException e) {
+			JOptionPane.showMessageDialog(field,"You must enter a number here.");
+			field.setText(Double.toString(minX));
+		}
+	}
+
+	private void setMaxY(JTextField field) {
+		try {
+			maxY=Double.parseDouble(field.getText());
+			plotArea.forceRedraw();
+			plotArea.fireRedraw();
+		} catch(NumberFormatException e) {
+			JOptionPane.showMessageDialog(field,"You must enter a number here.");
+			field.setText(Double.toString(maxY));
+		}
+	}
+
+	private void setSizeX(JTextField field) {
+		try {
+			sizeX=Double.parseDouble(field.getText());
+			plotArea.forceRedraw();
+			plotArea.fireRedraw();
+		} catch(NumberFormatException e) {
+			JOptionPane.showMessageDialog(field,"You must enter a number here.");
+			field.setText(Double.toString(sizeX));
+		}
+	}
+
+	private void setSizeY(JTextField field) {
+		try {
+			sizeY=Double.parseDouble(field.getText());
+			plotArea.forceRedraw();
+			plotArea.fireRedraw();
+		} catch(NumberFormatException e) {
+			JOptionPane.showMessageDialog(field,"You must enter a number here.");
+			field.setText(Double.toString(sizeY));
+		}
+	}
+
+	private void setClipX(JTextField field) {
+		try {
+			clipX=Integer.parseInt(field.getText());
+			imageRead=false;
+			loadImage();
+		} catch(NumberFormatException e) {
+			JOptionPane.showMessageDialog(field,"You must enter an integer here.");
+			field.setText(Integer.toString(clipX));
+		} catch(IOException e) {
+			JOptionPane.showMessageDialog(field,"The selected file had a problem.");
+		}
+	}
+
+	private void setClipY(JTextField field) {
+		try {
+			clipY=Integer.parseInt(field.getText());
+			imageRead=false;
+			loadImage();
+		} catch(NumberFormatException e) {
+			JOptionPane.showMessageDialog(field,"You must enter an integer here.");
+			field.setText(Integer.toString(clipY));
+		} catch(IOException e) {
+			JOptionPane.showMessageDialog(field,"The selected file had a problem.");
+		}
+	}
+
+	private void setClipSizeX(JTextField field) {
+		try {
+			clipSizeX=Integer.parseInt(field.getText());
+			imageRead=false;
+			loadImage();
+		} catch(NumberFormatException e) {
+			JOptionPane.showMessageDialog(field,"You must enter an integer here.");
+			field.setText(Integer.toString(clipSizeX));
+		} catch(IOException e) {
+			JOptionPane.showMessageDialog(field,"The selected file had a problem.");
+		}
+	}
+
+	private void setClipSizeY(JTextField field) {
+		try {
+			clipSizeY=Integer.parseInt(field.getText());
+			imageRead=false;
+			loadImage();
+		} catch(NumberFormatException e) {
+			JOptionPane.showMessageDialog(field,"You must enter an integer here.");
+			field.setText(Integer.toString(clipSizeY));
+		} catch(IOException e) {
+			JOptionPane.showMessageDialog(field,"The selected file had a problem.");
+		}
+	}
+
+    /**
+     * 
+     * @uml.property name="plotArea"
+     * @uml.associationEnd multiplicity="(1 1)"
+     */
+    private PlotArea2D plotArea;
+
+	private File imageFile=null;
+	private double minX = 0.0 ;
+	private double maxY = 0.0 ;
+	private double sizeX = 1.0 ;
+	private double sizeY = 1.0 ;
+	private int clipX = 0 ;
+	private int clipY = 0 ;
+	private int clipSizeX = 10 ;
+	private int clipSizeY = 10 ;
+    private ArrayList<SwapPair> colorSwaps = new ArrayList<SwapPair>(1);
+    private ColorGradient redGradient;
+    private ColorGradient greenGradient;
+    private ColorGradient blueGradient;
+    private transient JPanel propPanel;
+
+	private transient BufferedImage originalImage;
+	private transient BufferedImage fullImage;
+	private transient BufferedImage img;
+	private transient boolean imageRead=false;
+	private transient boolean imageColored=false;
+    private static final long serialVersionUID=846720938576l;
+	
+	private class SwapPair implements Serializable  {
+		public SwapPair(Color f,Color t) {
+			from=f.getRGB();
+			to=t.getRGB();
+		}
+        public SwapPair(SwapPair c) {
+            from=c.from;
+            to=c.to;
+        }
+		public void pickFrom() {
+			Component comp=propPanel;
+			while(comp!=null && !(comp instanceof Frame)) comp=comp.getParent();
+			if(comp==null) return;
+			JDialog dialog=new JDialog((Frame)comp,"Starting Color (Click to Select)",true);
+			dialog.getContentPane().setLayout(new GridLayout(1,1));
+			ColorPickPanel cpp=new ColorPickPanel(dialog);
+			dialog.getContentPane().add(new JScrollPane(cpp));
+			dialog.setSize(300,300);
+			dialog.setVisible(true);
+			from=cpp.curColor.getRGB();
+			dialog.dispose();
+		}
+		public void pickTo() {
+			Component comp=propPanel;
+			while(comp!=null && !(comp instanceof Frame)) comp=comp.getParent();
+			if(comp==null) return;
+			final JDialog dialog=new JDialog((Frame)comp,"Set To Color",true);
+			dialog.getContentPane().setLayout(new BorderLayout());
+			JColorChooser cc=new JColorChooser(new Color(to,true));
+			dialog.getContentPane().add(cc,BorderLayout.CENTER);
+			JButton button=new JButton("Done");
+			button.addActionListener(new ActionListener() {
+				@Override
+                public void actionPerformed(ActionEvent e) {
+					dialog.setVisible(false);
+				}
+			} );
+			dialog.setSize(300,300);
+			dialog.setVisible(true);
+			to=cc.getColor().getRGB();
+			dialog.dispose();
+		}
+		@Override
+        public String toString() {
+			return "Swap "+((from>>24)&0xff)+","+((from>>16)&0xff)+","+((from>>8)&0xff)+","+(from&0xff)+" to "+
+				((to>>24)&0xff)+","+((to>>16)&0xff)+","+((to>>8)&0xff)+","+(to&0xff);
+		}
+		public int from;
+		public int to;
+        private static final long serialVersionUID=108932756134l;
+	}
+	
+	private class ColorPickPanel extends JPanel implements MouseListener,MouseMotionListener {
+		public ColorPickPanel(JDialog d) {
+			dialog=d;
+			addMouseListener(this);
+			addMouseMotionListener(this);
+		}
+		@Override
+        public void mouseEntered(MouseEvent e) {}
+		@Override
+        public void mouseExited(MouseEvent e) {}
+		@Override
+        public void mouseClicked(MouseEvent e) {
+			grabColor(e.getX(),e.getY());
+			repaint();
+			dialog.setVisible(false);
+		}
+		@Override
+        public void mousePressed(MouseEvent e) {}
+		@Override
+        public void mouseReleased(MouseEvent e) {}
+		@Override
+        public void mouseMoved(MouseEvent e) {
+			grabColor(e.getX(),e.getY());
+			repaint();
+		}
+		@Override
+        public void mouseDragged(MouseEvent e) {}
+		
+		@Override
+        public Dimension getPreferredSize() {
+			return new Dimension(originalImage.getWidth(),originalImage.getHeight()+10);
+		}
+		
+		@Override
+        protected void paintComponent(Graphics g) {
+			g.setColor(curColor);
+			g.fillRect(0,0,originalImage.getWidth(),10);
+			g.drawImage(originalImage,0,10,null);
+			g.drawImage(fullImage,0,10+originalImage.getHeight(),null);
+		}
+		
+		private void grabColor(int x,int y) {
+			if(x<0 || x>=originalImage.getWidth() || y<10 || y>=originalImage.getHeight()+10) return;
+			curColor=new Color(originalImage.getRGB(x,y-10));
+		}
+		
+		public Color curColor=Color.black;
+		private final JDialog dialog;
+        private static final long serialVersionUID=98357609871346l;
+	}
+}

@@ -1,0 +1,263 @@
+/*
+ * Created on Feb 26, 2006
+ */
+package edu.swri.swiftvis.sources;
+
+import java.awt.BorderLayout;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.swing.JButton;
+import javax.swing.JFileChooser;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+
+import edu.swri.swiftvis.DataElement;
+import edu.swri.swiftvis.GraphElement;
+import edu.swri.swiftvis.OptionsData;
+import edu.swri.swiftvis.util.BinaryInput;
+import edu.swri.swiftvis.util.BufferedRandomAccessFile;
+import edu.swri.swiftvis.util.EditableBoolean;
+import edu.swri.swiftvis.util.EditableDouble;
+import edu.swri.swiftvis.util.EditableInt;
+
+public class CartAndRadSource extends AbstractSource implements FileSourceInter {
+    public CartAndRadSource() {}
+    
+    public CartAndRadSource(CartAndRadSource c,List<GraphElement> l) {
+        super(c,l);
+        offset=c.offset;
+        totalNum=c.totalNum;
+        fileToRead=c.fileToRead;
+        useXRange=new EditableBoolean(c.useXRange.getValue());
+        minXRange=new EditableDouble(c.minXRange.getValue());
+        maxXRange=new EditableDouble(c.maxXRange.getValue());
+        useYRange=new EditableBoolean(c.useYRange.getValue());
+        minYRange=new EditableDouble(c.minYRange.getValue());
+        maxYRange=new EditableDouble(c.maxYRange.getValue());
+        useThin=new EditableBoolean(c.useThin.getValue());
+        oneIn=new EditableInt(c.oneIn.getValue());
+    }
+
+    @Override
+    protected void redoAllElements() {
+        if(fileToRead==null) {
+            JOptionPane.showMessageDialog(propPanel,"You must select a file to read first.");
+        }
+        totalElements=-1;
+        redoBuffer(0);
+    }
+
+    @Override
+    protected void setupSpecificPanelProperties() {
+        JPanel outerPanel=new JPanel(new BorderLayout());
+        JPanel panel=new JPanel(new GridLayout(6,1));
+        fileLabel=new JLabel((fileToRead==null)?"No File Selected":fileToRead.getAbsolutePath());
+        panel.add(fileLabel);
+        JButton button=new JButton("Select File");
+        button.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                selectFile();
+                if(fileToRead!=null) fileLabel.setText(fileToRead.getAbsolutePath());
+            }
+        } );
+        panel.add(button);
+        button=new JButton("Read File");
+        button.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) { abstractRedoAllElements(); }
+        } );
+        panel.add(button);
+        outerPanel.add(panel,BorderLayout.NORTH);
+        propPanel.add("Settings",outerPanel);
+
+        panel=new JPanel(new BorderLayout());
+        JPanel northPanel=new JPanel(new GridLayout(8,1));
+        northPanel.add(useXRange.getCheckBox("Use x Range?",null));
+        JPanel innerPanel=new JPanel(new BorderLayout());
+        innerPanel.add(new JLabel("x minimum"),BorderLayout.WEST);
+        innerPanel.add(minXRange.getTextField(null),BorderLayout.CENTER);
+        northPanel.add(innerPanel);
+        innerPanel=new JPanel(new BorderLayout());
+        innerPanel.add(new JLabel("x maximum"),BorderLayout.WEST);
+        innerPanel.add(maxXRange.getTextField(null),BorderLayout.CENTER);
+        northPanel.add(innerPanel);
+        northPanel.add(useYRange.getCheckBox("Use y Range?",null));
+        innerPanel=new JPanel(new BorderLayout());
+        innerPanel.add(new JLabel("y minimum"),BorderLayout.WEST);
+        innerPanel.add(minYRange.getTextField(null),BorderLayout.CENTER);
+        northPanel.add(innerPanel);
+        innerPanel=new JPanel(new BorderLayout());
+        innerPanel.add(new JLabel("y maximum"),BorderLayout.WEST);
+        innerPanel.add(maxYRange.getTextField(null),BorderLayout.CENTER);
+        northPanel.add(innerPanel);
+        northPanel.add(useThin.getCheckBox("Use Thinning?",null));
+        innerPanel=new JPanel(new BorderLayout());
+        innerPanel.add(new JLabel("Take one in "),BorderLayout.WEST);
+        innerPanel.add(oneIn.getTextField(null),BorderLayout.CENTER);
+        northPanel.add(innerPanel);
+        panel.add(northPanel,BorderLayout.NORTH);
+        propPanel.add("Thinning",panel);        
+    }
+    
+    @Override
+    public DataElement getElement(int i, int stream) {
+        if(i<offset || i>=offset+dataVect.size()) {
+            redoBuffer(i);
+        }
+        return dataVect.get(i-offset);
+    }
+
+    @Override
+    public int getNumElements(int stream) {
+        return totalElements;
+    }
+
+    public int getNumParameters(int stream) {
+        return 0;
+    }
+
+    public String getParameterDescription(int stream, int which) {
+        return null;
+    }
+
+    public int getNumValues(int stream) {
+        return 7;
+    }
+
+    public String getValueDescription(int stream, int which) {
+        String[] vdesc={"x","y","z","vx","vy","vz","radius"};
+        return vdesc[which];
+    }
+
+    public static String getTypeDescription() {
+        return "Cartesian and Radius Source";        
+    }
+    
+    public String getDescription() {
+        return "Cartesian and Radius Source";
+    }
+
+    public GraphElement copy(List<GraphElement> l) {
+        return new CartAndRadSource(this,l);
+    }
+
+    public File[] getFiles() {
+        return new File[]{fileToRead};
+    }
+
+    public void setFile(int which, File f) {
+        fileToRead=f;
+        if(fileLabel!=null && fileLabel!=null) fileLabel.setText(fileToRead.getAbsolutePath());
+        if(raf!=null)
+            try {
+                raf.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        raf=null;
+    }
+
+    public void rereadFiles() {
+        abstractRedoAllElements();
+    }
+    
+    private void selectFile() {
+        JFileChooser fileChooser=new JFileChooser(OptionsData.instance().getLastDir());
+        if(fileChooser.showOpenDialog(propPanel)==JFileChooser.CANCEL_OPTION) return;
+        fileToRead=fileChooser.getSelectedFile();
+        if(raf!=null)
+            try {
+                raf.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        raf=null;
+        OptionsData.instance().setLastDir(fileToRead.getParentFile());        
+    }
+    
+    private void redoBuffer(int index) {
+        try {
+            if(raf==null) {
+                raf=new BufferedRandomAccessFile(fileToRead,"r");
+                bi=new BinaryInput(raf);
+                totalNum=bi.readInt4();
+            }
+            dataVect.clear();
+            int maxBufferSize=OptionsData.instance().getSourceSize()/(7*4+30);
+            ArrayList<ArrayIndexPair> pairs=new ArrayList<ArrayIndexPair>();
+            int[] params=new int[0];
+            float[] vals=new float[7];
+            raf.seek(4l+index*6l*8);
+            boolean scanningAll=totalElements==-1;
+            if(scanningAll) totalElements=0;
+            for(int i=index; i<totalNum && (pairs.size()<maxBufferSize || scanningAll); ++i) {
+                vals[0]=(float)bi.readReal8();
+                vals[1]=(float)bi.readReal8();
+                vals[2]=(float)bi.readReal8();
+                vals[3]=(float)bi.readReal8();
+                vals[4]=(float)bi.readReal8();
+                vals[5]=(float)bi.readReal8();
+                if((!useThin.getValue() || i%oneIn.getValue()==0) && 
+                        (!useXRange.getValue() ||(vals[0]>=minXRange.getValue() && vals[0]<=maxXRange.getValue())) && 
+                        (!useYRange.getValue() ||(vals[1]>=minYRange.getValue() && vals[1]<=maxYRange.getValue()))) {
+                    if(pairs.size()<maxBufferSize) {
+                        pairs.add(new ArrayIndexPair(i,vals));
+                        vals=new float[7];
+                    }
+                    totalElements++;
+                }
+            }
+            int pairIndex=0;
+            raf.seek(4l+totalNum*6l*8+index*8l);
+            for(int i=index; i<totalNum && pairIndex<pairs.size(); ++i) {
+                float tmp=(float)bi.readReal8();
+                if(pairs.get(pairIndex).index==i) {
+                    pairs.get(pairIndex).value[6]=tmp;
+                    dataVect.add(new DataElement(params,pairs.get(pairIndex).value));
+                    pairIndex++;
+                }
+            }
+        } catch(IOException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(propPanel,"There was an exception reading the file.");
+        }
+        offset=index;
+    }
+
+    private int offset;
+    private int totalNum;
+    private int totalElements;
+    private File fileToRead;
+    private EditableBoolean useXRange=new EditableBoolean(false);
+    private EditableDouble minXRange=new EditableDouble(0.0);
+    private EditableDouble maxXRange=new EditableDouble(1.0);
+    private EditableBoolean useYRange=new EditableBoolean(false);
+    private EditableDouble minYRange=new EditableDouble(0.0);
+    private EditableDouble maxYRange=new EditableDouble(1.0);
+    private EditableBoolean useThin=new EditableBoolean(false);
+    private EditableInt oneIn=new EditableInt(1);
+    
+    private transient JLabel fileLabel;
+    private transient BinaryInput bi;
+    private transient RandomAccessFile raf;
+    
+    private static final long serialVersionUID = -2803910984859514893L;
+    
+    private static class ArrayIndexPair {
+        public ArrayIndexPair(int i,float[] v) {
+            index=i;
+            value=v;
+        }
+        public int getIndex() { return index; }
+        public float[] getArray() { return value; }
+        private int index;
+        private float[] value;
+    }
+}

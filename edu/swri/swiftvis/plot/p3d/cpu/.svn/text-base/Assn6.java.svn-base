@@ -1,0 +1,207 @@
+package edu.swri.swiftvis.plot.p3d.cpu;
+
+// Assn6.java
+// This is an applet to demonstrate assignment #6.
+
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.applet.*;
+
+public class Assn6 extends Applet implements Runnable {
+	/**
+     * 
+     */
+    private static final long serialVersionUID = -177986305372498709L;
+    public void init() {
+		this.setLayout(new BorderLayout());
+		bottom_panel=new Panel();
+		view_toggle_button=new Button("Parallel");
+		bottom_panel.add(view_toggle_button);
+		bottom_panel.add(new Label("Umin:"));
+		umin=new TextField("-1.0");
+		bottom_panel.add(umin);
+		bottom_panel.add(new Label("Umax:"));
+		umax=new TextField("1.0");
+		bottom_panel.add(umax);
+		bottom_panel.add(new Label("Vmin:"));
+		vmin=new TextField("-1.0");
+		bottom_panel.add(vmin);
+		bottom_panel.add(new Label("Vmax:"));
+		vmax=new TextField("1.0");
+		bottom_panel.add(vmax);
+		this.add("South",bottom_panel);
+		pic_height=500-bottom_panel.getSize().height;
+
+		view_a=new JGVector(0.0,0.0,0.0,1.0);
+		view_b=new JGVector(0.0,0.0,1.0,1.0);
+		view_c=new JGVector(0.0,1.0,0.0,1.0);
+
+		view=new JGView(view_a,view_b,view_c);
+
+		view.setWindow(-1.0,-1.0,1.0,1.0);
+
+		display_type=1;
+		disp_x=0.0;
+		disp_y=0.0;
+		disp_z=-2.0;
+		view.setProjection(display_type,disp_x,disp_y,disp_z);
+
+		dist_to_front=0;
+		dist_to_back=10;
+		view.setFrontAndBackClippingDistance(dist_to_front,dist_to_back);
+
+		view.addChild(new JGLine(1.0,1.0,1.0,-1.0,1.0,1.0,Color.white));
+		view.addChild(new JGLine(-1.0,1.0,1.0,-1.0,-1.0,1.0,Color.white));
+		view.addChild(new JGLine(-1.0,-1.0,1.0,1.0,-1.0,1.0,Color.white));
+		view.addChild(new JGLine(1.0,-1.0,1.0,1.0,1.0,1.0,Color.white));
+
+		view.addChild(new JGLine(1.0,1.0,1.5,-1.0,1.0,1.5,Color.blue));
+		view.addChild(new JGLine(-1.0,1.0,1.5,-1.0,-1.0,1.5,Color.blue));
+		view.addChild(new JGLine(-1.0,-1.0,1.5,1.0,-1.0,1.5,Color.blue));
+		view.addChild(new JGLine(1.0,-1.0,1.5,1.0,1.0,1.5,Color.blue));
+
+		view.addChild(new JGLine(1.0,1.0,1.5,1.0,1.0,1.0,Color.green));
+		view.addChild(new JGLine(-1.0,1.0,1.5,-1.0,1.0,1.0,Color.green));
+		view.addChild(new JGLine(-1.0,-1.0,1.5,-1.0,-1.0,1.0,Color.green));
+		view.addChild(new JGLine(1.0,-1.0,1.5,1.0,-1.0,1.0,Color.green));
+
+		view.addChild(new JGLine(-0.2,-1.0,1.0,-0.2,0.0,1.0,Color.red));
+		view.addChild(new JGLine(0.2,-1.0,1.0,0.2,0.0,1.0,Color.red));
+		view.addChild(new JGLine(-0.2,0.0,1.0,0.2,0.0,1.0,Color.red));
+
+		view.addChild(new JGText(-0.5,0.0,0.5,"Mark's 3D Engine",Color.cyan));
+
+		picture=new BufferedImage(480,pic_height,BufferedImage.TYPE_INT_ARGB);
+
+		requestFocus();
+	}
+
+	public void paint(Graphics g) {
+		Graphics2D picg=picture.createGraphics();
+
+		picg.clipRect(0,0,480,pic_height);
+		view.endFrame(picg,null,false);
+		g.drawImage(picture,0,0,null);
+	}
+
+	public boolean action(Event evt,Object what) {
+		if(evt.target==view_toggle_button) {
+			if(view.getProjType()==0) {
+				view_toggle_button.setLabel("Perspective");
+			} else {
+				view_toggle_button.setLabel("Parallel");
+			}
+			view.switchProjectionType();
+			repaint();
+			return(true);
+		}
+		return(false);
+	}
+
+	public boolean lostFocus(Event evt,Object what) {
+		double dumin,dvmin,dumax,dvmax;
+
+		if((evt.target==umin) || (evt.target==umax) || (evt.target==vmin) || (evt.target==vmax)) {
+			try {
+				dumin=Double.valueOf(umin.getText()).doubleValue();
+			}
+			catch(NumberFormatException e) {
+				dumin=-1.0;
+				umin.setText("-1.0");
+			}
+			try {
+				dumax=Double.valueOf(umax.getText()).doubleValue();
+			}
+			catch(NumberFormatException e) {
+				dumax=-1.0;
+				umax.setText("-1.0");
+			}
+			try {
+				dvmin=Double.valueOf(vmin.getText()).doubleValue();
+			}
+			catch(NumberFormatException e) {
+				dvmin=-1.0;
+				vmin.setText("-1.0");
+			}
+			try {
+				dvmax=Double.valueOf(vmax.getText()).doubleValue();
+			}
+			catch(NumberFormatException e) {
+				dvmax=-1.0;
+				vmax.setText("-1.0");
+			}
+			view.setWindow(dumin,dvmin,dumax,dvmax);
+			repaint();
+		}
+		return(false);
+	}
+
+	public boolean mouseDown(Event evt,int x,int y) {
+		if(y<pic_height) {
+			if(thread==null) {
+				thread=new Thread(this);
+				thread.start();
+			}
+			running=true;
+			SetAngles(x,y);
+			if(evt.metaDown()) dir=-1.0; else dir=1.0;
+		}
+
+		return(true);
+	}
+
+	public boolean mouseDrag(Event evt,int x,int y) {
+		if(running) {
+			SetAngles(x,y);
+		}
+
+		return(true);
+	}
+
+	public boolean mouseUp(Event evt,int x,int y) {
+		if(running) {
+			if(thread!=null) {
+				//thread.stop();
+				thread=null;
+			}
+		}
+
+		return(true);
+	}
+
+	private void SetAngles(int x,int y) {
+		udang=(y-240)/2400.0;
+		rlang=(240-x)/2400.0;
+	}
+
+	public void run() {
+		while(true) {
+			view.moveForward(dir*0.1);
+			view.turnLeftRight(dir*rlang);
+			view.turnUpDown(dir*udang);
+			repaint();
+			try {
+				Thread.sleep(100);
+			}
+			catch(InterruptedException e) {
+				System.out.println("Thread interrupted!");
+			}
+		}
+	}
+
+	private JGView view;
+	private JGVector view_a,view_b,view_c;
+	private int display_type;
+	private double disp_x,disp_y,disp_z;
+	private double dist_to_front,dist_to_back;
+	private BufferedImage picture;
+
+	private Thread thread=null;
+	private double udang,rlang,dir=1.0;
+	private boolean running=false;
+
+	private Panel bottom_panel;
+	private Button view_toggle_button;
+	private TextField umin,umax,vmin,vmax;
+	private int pic_height;
+}

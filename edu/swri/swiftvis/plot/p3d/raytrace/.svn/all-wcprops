@@ -1,0 +1,59 @@
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/raytrace
+END
+RTSphere.java
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/7/SWIFTVis/edu/swri/swiftvis/plot/p3d/raytrace/RTSphere.java
+END
+RayTraceEngine.java
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/raytrace/RayTraceEngine.java
+END
+RTTriangle.java
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/raytrace/RTTriangle.java
+END
+Ray.java
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/raytrace/Ray.java
+END
+RayFollower.java
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/raytrace/RayFollower.java
+END
+RenderFrame.java
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/raytrace/RenderFrame.java
+END
+OctreeNode.java
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/!svn/ver/7/SWIFTVis/edu/swri/swiftvis/plot/p3d/raytrace/OctreeNode.java
+END
+RTGeometry.java
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/raytrace/RTGeometry.java
+END
+Octree.java
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/7/SWIFTVis/edu/swri/swiftvis/plot/p3d/raytrace/Octree.java
+END

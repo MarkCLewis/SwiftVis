@@ -1,0 +1,628 @@
+/*
+ * Created on Jul 1, 2005
+ */
+package edu.swri.swiftvis.scheme;
+
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+
+public abstract class HardcodedFunction implements SchemeFunction {
+
+    public SchemeElement eval(SchemeEnvironment env) {
+        return this;
+    }
+
+    public SchemeElement car() {
+        throw new SchemeException("Tried to take car of function: "+this);
+    }
+
+    public SchemeElement cdr() {
+        throw new SchemeException("Tried to take cdr of function: "+this);
+    }
+    
+    private static final long serialVersionUID = -888201751439372437L;
+
+    public static class Plus extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            double ret=0;
+            while(args!=ConsCell.nullInstance()) {
+                ret+=((SchemeValue)args.car().eval(env)).numericValue();
+                args=(ConsCell)args.cdr();
+            }
+            return new SchemeValue(ret);
+        }
+        private static final long serialVersionUID=884759238237763457l;
+    }
+    public static class Minus extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            double ret=((SchemeValue)args.car().eval(env)).numericValue();
+            args=(ConsCell)args.cdr();
+            while(args!=ConsCell.nullInstance()) {
+                ret-=((SchemeValue)args.car().eval(env)).numericValue();
+                args=(ConsCell)args.cdr();
+            }
+            return new SchemeValue(ret);
+        }
+        private static final long serialVersionUID=4375984375623l;
+    }
+    public static class Mult extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            double ret=1;
+            while(args!=ConsCell.nullInstance()) {
+                ret*=((SchemeValue)args.car().eval(env)).numericValue();
+                args=(ConsCell)args.cdr();
+            }
+            return new SchemeValue(ret);
+        }
+        private static final long serialVersionUID=3257690872l;
+    }
+    public static class Div extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            double ret=((SchemeValue)args.car().eval(env)).numericValue();
+            args=(ConsCell)args.cdr();
+            while(args!=ConsCell.nullInstance()) {
+                ret/=((SchemeValue)args.car().eval(env)).numericValue();
+                args=(ConsCell)args.cdr();
+            }
+            return new SchemeValue(ret);
+        }
+        private static final long serialVersionUID=2576098273567237l;
+    }
+    public static class Pow extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            double x=((SchemeValue)args.car().eval(env)).numericValue();
+            double y=((SchemeValue)args.cdr().car().eval(env)).numericValue();
+            return new SchemeValue(Math.pow(x,y));
+        }
+        private static final long serialVersionUID=223325707906726473l;
+    }
+    public static class Sin extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            double x=((SchemeValue)args.car().eval(env)).numericValue();
+            return new SchemeValue(Math.sin(x));
+        }
+        private static final long serialVersionUID=113463466795237l;
+    }
+    public static class Cos extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            double x=((SchemeValue)args.car().eval(env)).numericValue();
+            return new SchemeValue(Math.cos(x));
+        }
+        private static final long serialVersionUID=109869804475233459l;
+    }
+    public static class Tan extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            double x=((SchemeValue)args.car().eval(env)).numericValue();
+            return new SchemeValue(Math.tan(x));
+        }
+        private static final long serialVersionUID=52890734864234l;
+    }
+    public static class Sqrt extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            double x=((SchemeValue)args.car().eval(env)).numericValue();
+            return new SchemeValue(Math.sqrt(x));
+        }
+        private static final long serialVersionUID=356980723567235l;
+    }
+    public static class LT extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return SchemeBoolean.create(((SchemeValue)args.car().eval(env)).numericValue()<((SchemeValue)args.cdr().car().eval(env)).numericValue());
+        }
+        private static final long serialVersionUID=235089734753487l;
+    }
+    public static class GT extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return SchemeBoolean.create(((SchemeValue)args.car().eval(env)).numericValue()>((SchemeValue)args.cdr().car().eval(env)).numericValue());
+        }
+        private static final long serialVersionUID=997834589327556l;
+    }
+    public static class LTE extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return SchemeBoolean.create(((SchemeValue)args.car().eval(env)).numericValue()<=((SchemeValue)args.cdr().car().eval(env)).numericValue());
+        }
+        private static final long serialVersionUID=5582823323724357l;
+    }
+    public static class GTE extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return SchemeBoolean.create(((SchemeValue)args.car().eval(env)).numericValue()>=((SchemeValue)args.cdr().car().eval(env)).numericValue());
+        }
+        private static final long serialVersionUID=88978438396996l;
+    }
+    public static class EQ extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return SchemeBoolean.create(((SchemeValue)args.car().eval(env)).numericValue()==((SchemeValue)args.cdr().car().eval(env)).numericValue());
+        }
+        private static final long serialVersionUID=11188673745732l;
+    }
+    public static class Not extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return SchemeBoolean.create(!((SchemeBoolean)args.car().eval(env)).booleanValue());
+        }
+        private static final long serialVersionUID=847273455678338l;
+    }
+    public static class And extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            boolean ret=true;
+            while(args!=ConsCell.nullInstance() && ret) {
+                ret&=((SchemeBoolean)args.car().eval(env)).booleanValue();
+                args=(ConsCell)args.cdr();
+            }
+            return SchemeBoolean.create(ret);
+        }
+        private static final long serialVersionUID=32560934623347l;
+    }
+    public static class Or extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            boolean ret=false;
+            while(args!=ConsCell.nullInstance() && !ret) {
+                ret|=((SchemeBoolean)args.car().eval(env)).booleanValue();
+                args=(ConsCell)args.cdr();
+            }
+            return SchemeBoolean.create(ret);
+        }
+        private static final long serialVersionUID=322094496493745l;
+    }
+    public static class Xor extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            boolean ret=((SchemeBoolean)args.car().eval(env)).booleanValue();
+            args=(ConsCell)args.cdr();
+            while(args!=ConsCell.nullInstance()) {
+                ret^=((SchemeBoolean)args.car().eval(env)).booleanValue();
+                args=(ConsCell)args.cdr();
+            }
+            return SchemeBoolean.create(ret);
+        }
+        private static final long serialVersionUID=322094496493745l;
+    }
+    public static class isNull extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return SchemeBoolean.create(args.car().eval(env)==ConsCell.nullInstance());
+        }
+        private static final long serialVersionUID=134569873659872356l;
+    }
+    public static class isNumber extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return SchemeBoolean.create(args.car().eval(env) instanceof SchemeValue);
+        }
+        private static final long serialVersionUID=24573468645634l;
+    }
+    public static class isSymbol extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return SchemeBoolean.create(args.car().eval(env) instanceof SchemeName);
+        }
+        private static final long serialVersionUID=99832658235882364l;
+    }
+    public static class isPair extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return SchemeBoolean.create(args.car().eval(env) instanceof ConsCell);
+        }
+        private static final long serialVersionUID=327347835232357l;
+    }
+    public static class isEq extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return SchemeBoolean.create(args.car().eval(env)==args.cdr().car().eval(env));
+        }
+        private static final long serialVersionUID=8065974583475l;
+    }
+    public static class isEqv extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return SchemeBoolean.create(args.car().eval(env)==args.cdr().car().eval(env));
+        }
+        private static final long serialVersionUID=54587687690098569l;
+    }
+    public static class isEquals extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return SchemeBoolean.create(recurseEquals(args.car().eval(env),args.cdr().car().eval(env)));
+        }
+        private boolean recurseEquals(SchemeElement e1,SchemeElement e2) {
+            if(e1==e2) return true;
+            if(e1==ConsCell.nullInstance() || e2==ConsCell.nullInstance()) return false;
+            if(e1 instanceof ConsCell && e2 instanceof ConsCell) {
+                return recurseEquals(e1.car(),e2.car()) &&
+                    recurseEquals(e1.cdr(),e2.cdr());
+            }
+            if(e1 instanceof SchemeValue && e2 instanceof SchemeValue) {
+                return ((SchemeValue)e1).numericValue()==((SchemeValue)e2).numericValue();
+            }
+            if(e1 instanceof SchemeBoolean && e2 instanceof SchemeBoolean) {
+                return ((SchemeBoolean)e1).booleanValue()==((SchemeBoolean)e2).booleanValue();
+            }
+            if(e1 instanceof SchemeName && e2 instanceof SchemeName) {
+                return e1.toString().equals(e2.toString());
+            }
+            return false;
+        }
+        private static final long serialVersionUID=3246345798724365l;
+    }
+    public static class If extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            if(((SchemeBoolean)args.car().eval(env)).booleanValue()) {
+                return args.cdr().car().eval(env);
+            } else {
+                return args.cdr().cdr().car().eval(env);
+            }
+        }
+        private static final long serialVersionUID=235734680273586957l;
+    }
+    public static class Cond extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            for(ConsCell rover=args; rover!=ConsCell.nullInstance(); rover=(ConsCell)rover.cdr()) {
+                if(rover.car().car() instanceof SchemeName && rover.car().car().toString().equals("else")
+                        || ((SchemeBoolean)rover.car().car().eval(env)).booleanValue()) {
+                    return rover.car().cdr().car().eval(env);
+                }
+            }
+            return null;
+        }
+        private static final long serialVersionUID=3252345623408971346l;
+    }
+    public static class Letrec extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            SchemeEnvironment local=new SchemeEnvironment(env,false);
+            List<Lambda> fs=new LinkedList<Lambda>();
+            for(SchemeElement rover=args.car(); rover!=ConsCell.nullInstance(); rover=rover.cdr()) {
+                SchemeElement value=rover.car().cdr().car().eval(local);
+                local.addNameValue(rover.car().car().toString(),value);
+                if(value instanceof Lambda) fs.add((Lambda)value);
+            }
+            for(Lambda l:fs) l.doBinding(local);
+            return args.cdr().car().eval(local);
+        }
+        private static final long serialVersionUID=12456457362235734l;
+    }
+    public static class Begin extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            SchemeElement ret=ConsCell.nullInstance();
+            for(SchemeElement rover=args; rover!=ConsCell.nullInstance(); rover=rover.cdr()) {
+                ret=rover.car().eval(env);
+            }
+            return ret;
+        }
+        private static final long serialVersionUID=12456457362235734l;
+    }
+    public static class Cons extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return new ConsCell(args.car().eval(env),args.cdr().car().eval(env));
+        }
+        private static final long serialVersionUID=3468569643723738l;
+    }
+    public static class MakeList extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            if(args==ConsCell.nullInstance()) return args;
+            return new ConsCell(args.car().eval(env),execute(env,(ConsCell)args.cdr()));
+        }
+        private static final long serialVersionUID=3468569643723738l;
+    }
+    public static class Car extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return args.car().eval(env).car();
+        }
+        private static final long serialVersionUID=23563468580347l;
+    }
+    public static class Cdr extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return args.car().eval(env).cdr();
+        }
+        private static final long serialVersionUID=32458345687236l;
+    }
+    public static class Caar extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return args.car().eval(env).car().car();
+        }
+        private static final long serialVersionUID=22457247534683l;
+    }
+    public static class Cadr extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return args.car().eval(env).cdr().car();
+        }
+        private static final long serialVersionUID=2752367134615487l;
+    }
+    public static class Cdar extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return args.car().eval(env).car().cdr();
+        }
+        private static final long serialVersionUID=345723467234853658l;
+    }
+    public static class Cddr extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return args.car().eval(env).cdr().cdr();
+        }
+        private static final long serialVersionUID=95684843346l;
+    }
+    public static class Caaar extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return args.car().eval(env).car().car().car();
+        }
+        private static final long serialVersionUID=6784589271258l;
+    }
+    public static class Caadr extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return args.car().eval(env).cdr().car().car();
+        }
+        private static final long serialVersionUID=679458734222357589l;
+    }
+    public static class Cadar extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return args.car().eval(env).car().cdr().car();
+        }
+        private static final long serialVersionUID=6935838946973648l;
+    }
+    public static class Caddr extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return args.car().eval(env).cdr().cdr().car();
+        }
+        private static final long serialVersionUID=254673474589l;
+    }
+    public static class Cdaar extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return args.car().eval(env).car().car().cdr();
+        }
+        private static final long serialVersionUID=1347634685693456l;
+    }
+    public static class Cdadr extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return args.car().eval(env).cdr().car().cdr();
+        }
+        private static final long serialVersionUID=958956873256237587l;
+    }
+    public static class Cddar extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return args.car().eval(env).car().cdr().cdr();
+        }
+        private static final long serialVersionUID=6834682352137l;
+    }
+    public static class Cdddr extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return args.car().eval(env).cdr().cdr().cdr();
+        }
+        private static final long serialVersionUID=9547834723623l;
+    }
+    public static class Length extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return new SchemeValue(((ConsCell)args.car().eval(env)).length());
+        }
+        private static final long serialVersionUID=32232573589678l;
+    }
+    public static class Quote extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return args.car();
+        }
+        private static final long serialVersionUID=956095697834734l;
+    }
+    public static class Eval extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return args.car().eval(env).eval(env);
+        }
+        private static final long serialVersionUID=884735867358679l;
+    }
+    public static class LambdaMaker extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            return new Lambda((ConsCell)args.car(),(ConsCell)args.cdr().car(),env);
+        }
+        private static final long serialVersionUID=2234611134274579l;
+    }
+    public static class Define extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            SchemeElement ret;
+            if(args.car() instanceof SchemeName) {
+                String name=args.car().toString();
+                env.clearName(name);
+                ret=env.addNameValue(name,args.cdr().car().eval(env));
+            } else {
+                String name=args.car().car().toString();
+                env.clearName(name);
+                ret=env.addNameValue(name,new Lambda((ConsCell)args.car().cdr(),(ConsCell)args.cdr().car(),env));
+            }
+            if(ret instanceof Lambda) ((Lambda)ret).doBinding(env);
+            return ret;
+        }
+        private static final long serialVersionUID=475945824352162858l;
+    }
+    public static class Display extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            while(args!=ConsCell.nullInstance()) {
+                System.out.print(args.car().eval(env)+" ");
+                args=(ConsCell)args.cdr();
+            }
+            return ConsCell.nullInstance();
+        }
+        private static final long serialVersionUID=2234611134274579l;
+    }
+    public static class Newline extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            System.out.println();
+            return ConsCell.nullInstance();
+        }
+        private static final long serialVersionUID=2234611134274579l;
+    }
+    
+    /**
+     * This is a standard map function for processing in functional languages.
+     * It takes a function and a list and returns the list the has the function
+     * applied to all the elements of the original list.
+     * 
+     * @author Mark Lewis
+     */
+    public static class Map extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            Lambda f=(Lambda)args.car().eval(env);
+            ConsCell lst=(ConsCell)args.cdr().car().eval(env);
+            SchemeElement[] arr=new SchemeElement[lst.length()];
+            int i=0;
+            for(SchemeElement rover=lst; rover!=ConsCell.nullInstance(); rover=rover.cdr(),++i) {
+                arr[i]=f.execute(env,new ConsCell(new WrapperElement(rover.car()),ConsCell.nullInstance()));
+            }
+            ConsCell ret=ConsCell.nullInstance();
+            for(i=arr.length-1; i>=0; --i) {
+                ret=new ConsCell(arr[i],ret);
+            }
+            return ret;
+        }
+        private static final long serialVersionUID=88275798722367873l;
+    }
+    
+    /**
+     * This is a derivative of map that takes two functions.  The first is a boolean
+     * function telling if the element should be included and the second is the
+     * mapping function.
+     * 
+     * @author Mark Lewis
+     */
+    public static class SelectMap extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            Lambda b=(Lambda)args.car().eval(env);
+            Lambda f=(Lambda)args.cdr().car().eval(env);
+            ConsCell lst=(ConsCell)args.cdr().cdr().car().eval(env);
+            SchemeElement[] arr=new SchemeElement[lst.length()];
+            int i=0;
+            for(SchemeElement rover=lst; rover!=ConsCell.nullInstance(); rover=rover.cdr(),++i) {
+                ConsCell subArgs=new ConsCell(new WrapperElement(rover.car()),ConsCell.nullInstance());
+                SchemeBoolean bool=(SchemeBoolean)b.execute(env,subArgs);
+                if(bool.booleanValue()) {
+                    arr[i]=f.execute(env,subArgs);
+                } else {
+                    arr[i]=null;
+                }
+            }
+            ConsCell ret=ConsCell.nullInstance();
+            for(i=arr.length-1; i>=0; --i) {
+                if(arr[i]!=null) ret=new ConsCell(arr[i],ret);
+            }
+            return ret;
+        }
+        private static final long serialVersionUID=142623678327337243l;
+    }
+    
+    /**
+     * This takes a boolean function and a list and returns a list containing only
+     * the elements for which the function returns true.
+     * 
+     * @author Mark Lewis
+     */
+    public static class Select extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            Lambda b=(Lambda)args.car().eval(env);
+            ConsCell lst=(ConsCell)args.cdr().car().eval(env);
+            SchemeElement[] arr=new SchemeElement[lst.length()];
+            int i=0;
+            for(SchemeElement rover=lst; rover!=ConsCell.nullInstance(); rover=rover.cdr(),++i) {
+                ConsCell subArgs=new ConsCell(new WrapperElement(rover.car()),ConsCell.nullInstance());
+                SchemeBoolean bool=(SchemeBoolean)b.execute(env,subArgs);
+                if(bool.booleanValue()) {
+                    arr[i]=subArgs;
+                } else {
+                    arr[i]=null;
+                }
+            }
+            ConsCell ret=ConsCell.nullInstance();
+            for(i=arr.length-1; i>=0; --i) {
+                if(arr[i]!=null) ret=new ConsCell(arr[i],ret);
+            }
+            return ret;
+        }
+        private static final long serialVersionUID=142623678327337243l;
+    }
+    
+    /**
+     * This function helps you build large lists from a function.  The second
+     * argument is a function that will be called to build the list.  The first
+     * argument is either a boolean funtion that returns true if there area to be
+     * more elements in the return list, or a numberic value specifying the number
+     * of elements in the list.  This function is helpful for reading the
+     * contents of a file.
+     * 
+     * @author Mark Lewis
+     */
+    public static class BuildList extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            Lambda f=(Lambda)args.cdr().car().eval(env);
+            List<SchemeElement> list=new ArrayList<SchemeElement>();
+            SchemeElement arg1=args.car().eval(env);
+            if(arg1 instanceof SchemeFunction) {
+                SchemeFunction b=(SchemeFunction)arg1;
+                while(((SchemeBoolean)b.execute(env,ConsCell.nullInstance())).booleanValue()) {
+                    list.add(f.execute(env,ConsCell.nullInstance()));
+                }
+            } else {
+                int cnt=(int)((SchemeValue)arg1).numericValue();
+                for(int i=0; i<cnt; ++i) {
+                    list.add(f.execute(env,ConsCell.nullInstance()));
+                }
+            }
+            ConsCell ret=ConsCell.nullInstance();
+            for(int i=list.size()-1; i>=0; --i) {
+                ret=new ConsCell(list.get(i),ret);
+            }
+            return ret;
+        }
+        private static final long serialVersionUID=325608972762243l;
+    }
+    
+    /**
+     * This function has a first argument that is either a function or a numeric
+     * value and a second argument that is a function.  It operates like BuildList,
+     * only the second function returns lists whose elements are concatenated
+     * together to make the return list.
+     * 
+     * @author Mark Lewis
+     */
+    public static class BuildListFromLists extends HardcodedFunction {
+        public SchemeElement execute(SchemeEnvironment env, ConsCell args) {
+            Lambda f=(Lambda)args.cdr().car().eval(env);
+            List<SchemeElement> list=new ArrayList<SchemeElement>();
+            SchemeElement arg1=args.car().eval(env);
+            if(arg1 instanceof SchemeFunction) {
+                SchemeFunction b=(SchemeFunction)arg1;
+                while(((SchemeBoolean)b.execute(env,ConsCell.nullInstance())).booleanValue()) {
+                    SchemeElement lst=f.execute(env,ConsCell.nullInstance());
+                    while(lst!=ConsCell.nullInstance()) {
+                        list.add(lst.car());
+                        lst=lst.cdr();
+                    }
+                }
+            } else {
+                int cnt=(int)((SchemeValue)arg1).numericValue();
+                for(int i=0; i<cnt; ++i) {
+                    SchemeElement lst=f.execute(env,ConsCell.nullInstance());
+                    while(lst!=ConsCell.nullInstance()) {
+                        list.add(lst.car());
+                        lst=lst.cdr();
+                    }
+                }                
+            }
+            ConsCell ret=ConsCell.nullInstance();
+            for(int i=list.size()-1; i>=0; --i) {
+                ret=new ConsCell(list.get(i),ret);
+            }
+            return ret;
+        }
+        private static final long serialVersionUID=325608972762243l;
+    }
+    
+    /**
+     * This class is needed for hard coding things like map.  The reason is that otherwise one
+     * extra call to eval is always made that crashes it.  This happens because when map is written
+     * as a scheme function, the list is always either quoted or referenced by a name.  Either way,
+     * a call to eval is need to get the actual list.  Having this wrapper class prevents us from
+     * to bind a name to the environment that isn't really needed just so it can be dereferenced.
+     * 
+     * @author Mark Lewis
+     */
+    public static class WrapperElement implements SchemeElement {
+        public WrapperElement(SchemeElement c) {
+            content=c;
+        }
+        public SchemeElement eval(SchemeEnvironment env) {
+            return content;
+        }
+        public SchemeElement car() {
+            return content.car();
+        }
+        public SchemeElement cdr() {
+            return content.cdr();
+        }
+        private final SchemeElement content;
+        private static final long serialVersionUID=772346809346237l;
+    }
+}

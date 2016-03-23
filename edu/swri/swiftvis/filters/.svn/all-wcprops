@@ -1,0 +1,257 @@
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters
+END
+FrequencyAnalysisFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/FrequencyAnalysisFilter.java
+END
+FunctionFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/FunctionFilter.java
+END
+StreamMergeFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/StreamMergeFilter.java
+END
+CumulativeFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/CumulativeFilter.java
+END
+PhotometryFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/PhotometryFilter.java
+END
+ResonanceFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/ResonanceFilter.java
+END
+KeySelectionFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/KeySelectionFilter.java
+END
+InputCollectionFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/InputCollectionFilter.java
+END
+ElementTableEditor.java
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/ElementTableEditor.java
+END
+CountRebinFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/CountRebinFilter.java
+END
+SchemeFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/SchemeFilter.java
+END
+WakePeakFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/WakePeakFilter.java
+END
+CorrelationFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/CorrelationFilter.java
+END
+DistributionDifferenceFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/DistributionDifferenceFilter.java
+END
+RayTraceBinningFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/RayTraceBinningFilter.java
+END
+CoordConvertFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/CoordConvertFilter.java
+END
+ElementSplitFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/ElementSplitFilter.java
+END
+RotationFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/RotationFilter.java
+END
+SelectFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/SelectFilter.java
+END
+StreamBinningFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/StreamBinningFilter.java
+END
+ClusterFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/ClusterFilter.java
+END
+GroupNumberingFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/GroupNumberingFilter.java
+END
+StreamSplitFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/StreamSplitFilter.java
+END
+SyMBAMassFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/SyMBAMassFilter.java
+END
+MergeFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/MergeFilter.java
+END
+RegionSelectionFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/RegionSelectionFilter.java
+END
+MassFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/MassFilter.java
+END
+MovieFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/MovieFilter.java
+END
+ConstantsFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/ConstantsFilter.java
+END
+AbstractMultipleSourceFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/AbstractMultipleSourceFilter.java
+END
+ThinningFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/ThinningFilter.java
+END
+LinearFitFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/LinearFitFilter.java
+END
+ScriptFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/ScriptFilter.java
+END
+InterpolatedSurfaceFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/InterpolatedSurfaceFilter.java
+END
+BoxCarFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/BoxCarFilter.java
+END
+BinnedFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/BinnedFilter.java
+END
+AbstractSingleSourceFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/AbstractSingleSourceFilter.java
+END
+StreamUnbinningFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/StreamUnbinningFilter.java
+END
+MatrixFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/MatrixFilter.java
+END
+NonlinearFitFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/NonlinearFitFilter.java
+END
+SortFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/SortFilter.java
+END
+SliceSelectionFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/filters/SliceSelectionFilter.java
+END

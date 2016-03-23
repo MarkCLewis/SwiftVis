@@ -1,0 +1,265 @@
+/*
+ * Created on Aug 8, 2007
+ */
+package edu.swri.swiftvis.filters;
+
+import java.awt.BorderLayout;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.HashMap;
+import java.util.List;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+import edu.swri.swiftvis.DataElement;
+import edu.swri.swiftvis.DataFormula;
+import edu.swri.swiftvis.GraphElement;
+import edu.swri.swiftvis.util.EditableBoolean;
+import edu.swri.swiftvis.util.EditableDouble;
+import edu.swri.swiftvis.util.EditableInt;
+
+/**
+ * This filter lets the user specify formulas for x, y, and z for a set of points
+ * and outputs grid points that approximate a smooth surface passing through those
+ * points.  The user has options for deciding how the z values will be interpolated
+ * based on the x and y values relative to a given grid point.
+ * 
+ * The user gets to enter a weight formula.  This will be evaluated for each of the
+ * points in the grid with each of the incoming data points.  To make the formula work
+ * we pass in variables for x, y, and dist. 
+ * 
+ * @author Mark Lewis
+ */
+public class InterpolatedSurfaceFilter extends AbstractMultipleSourceFilter {
+    public InterpolatedSurfaceFilter() {}
+
+    private InterpolatedSurfaceFilter(InterpolatedSurfaceFilter c,List<GraphElement> l) {
+        xFormula=new DataFormula(c.xFormula);
+        yFormula=new DataFormula(c.yFormula);
+        zFormula=new DataFormula(c.zFormula);
+        minX=new EditableDouble(c.minX.getValue());
+        maxX=new EditableDouble(c.maxX.getValue());
+        autoMinX=new EditableBoolean(c.autoMinX.getValue());
+        autoMaxX=new EditableBoolean(c.autoMaxX.getValue());
+        minY=new EditableDouble(c.minY.getValue());
+        maxY=new EditableDouble(c.maxY.getValue());
+        autoMinY=new EditableBoolean(c.autoMinY.getValue());
+        autoMaxY=new EditableBoolean(c.autoMaxY.getValue());
+        numXBins=new EditableInt(c.numXBins.getValue());
+        numYBins=new EditableInt(c.numYBins.getValue());
+        weightFormula=new DataFormula(c.weightFormula);
+        maxDist=new EditableDouble(c.maxDist.getValue());
+        fixOnZeroDist=new EditableBoolean(c.fixOnZeroDist.getValue());
+    }
+
+    @Override
+    protected boolean doingInThreads() {
+        return false;
+    }
+
+    @Override
+    protected void redoAllElements() {
+        sizeDataVectToInputStreams();
+        for(int s=0; s<getSource(0).getNumStreams(); ++s) {
+            redoBounds(s);
+            int[] range=xFormula.getSafeElementRange(this,s);
+            DataFormula.mergeSafeElementRanges(range,yFormula.getSafeElementRange(this,s));
+            DataFormula.mergeSafeElementRanges(range,zFormula.getSafeElementRange(this,s));
+            DataFormula.mergeSafeElementRanges(range,weightFormula.getSafeElementRange(this,s));
+            DataFormula.checkRangeSafety(range,this);
+            double[] x=new double[range[1]];
+            double[] y=new double[range[1]];
+            double[] z=new double[range[1]];
+            for(int i=range[0]; i<range[1]; ++i) {
+                x[i]=xFormula.valueOf(this,s,i);
+                y[i]=yFormula.valueOf(this,s,i);
+                z[i]=zFormula.valueOf(this,s,i);
+            }
+            int[] params=new int[1];
+            float[] vals=new float[3];
+            HashMap<String,Double> hash=new HashMap<String,Double>();
+            double maxD=maxDist.getValue();
+            for(int i=0; i<numXBins.getValue(); ++i) {
+                double px=minX.getValue()+i*(maxX.getValue()-minX.getValue())/numXBins.getValue();
+                vals[0]=(float)px;
+                hash.put("x",px);
+                for(int j=0; j<numYBins.getValue(); ++j) {
+                    double py=minY.getValue()+j*(maxY.getValue()-minY.getValue())/numYBins.getValue();
+                    vals[1]=(float)py;
+                    hash.put("y",py);
+                    double zOut=0.0;
+                    double totWeight=0.0;
+                    int equalPoint=-1;
+                    params[0]=0;
+                    for(int k=range[0]; k<range[1] && equalPoint<0; ++k) {
+                        double dx=px-x[k];
+                        double dy=py-y[k];
+                        double dist=Math.sqrt(dx*dx+dy*dy);
+                        hash.put("dist",dist);
+                        if(dist==0.0 && fixOnZeroDist.getValue()) {
+                            equalPoint=k;
+                            params[0]=1;
+                        }
+                        else if(maxD<0 || dist<maxD) {
+                            double w=weightFormula.valueOf(this,s,k,null,hash);
+                            double localZ=zFormula.valueOf(this,s,k);
+                            totWeight+=w;
+                            zOut+=localZ*w;
+                            params[0]++;
+                        }
+                    }
+                    if(equalPoint>-1) {
+                        vals[2]=(float)z[equalPoint];
+                    } else {
+                        vals[2]=(float)(zOut/totWeight);
+                    }
+                    dataVect.get(s).add(new DataElement(params,vals));
+                }
+            }
+        }
+    }
+
+    @Override
+    protected void setupSpecificPanelProperties() {
+        JPanel panel=new JPanel(new BorderLayout());
+        Box northBox=new Box(BoxLayout.Y_AXIS);
+        JPanel titlePanel=new JPanel(new GridLayout(3,1));
+        titlePanel.setBorder(BorderFactory.createTitledBorder("Formulas"));
+        titlePanel.add(xFormula.getLabeledTextField("X formula",null));
+        titlePanel.add(yFormula.getLabeledTextField("Y formula",null));
+        titlePanel.add(zFormula.getLabeledTextField("Z formula",null));
+        northBox.add(titlePanel);
+
+        titlePanel=new JPanel(new BorderLayout());
+        titlePanel.setBorder(BorderFactory.createTitledBorder("Grid Bounds"));
+        JPanel autoPanel=new JPanel(new GridLayout(5,1));
+        autoPanel.add(new JLabel("Auto"));
+        autoPanel.add(autoMinX.getCheckBox("Min X",new EditableBoolean.Listener() {
+            public void valueChanged() { redoBounds(0); }
+        }));
+        autoPanel.add(autoMaxX.getCheckBox("Max X",new EditableBoolean.Listener() {
+            public void valueChanged() { redoBounds(0); }
+        }));
+        autoPanel.add(autoMinY.getCheckBox("Min Y",new EditableBoolean.Listener() {
+            public void valueChanged() { redoBounds(0); }
+        }));
+        autoPanel.add(autoMaxY.getCheckBox("Max Y",new EditableBoolean.Listener() {
+            public void valueChanged() { redoBounds(0); }
+        }));
+        titlePanel.add(autoPanel,BorderLayout.WEST);
+        JPanel valuePanel=new JPanel(new GridLayout(5,1));
+        valuePanel.add(new JLabel("Value"));
+        valuePanel.add(minX.getTextField(new EditableDouble.Listener() {
+            public void valueChanged() { autoMinX.setValue(false); }
+        }));
+        valuePanel.add(maxX.getTextField(new EditableDouble.Listener() {
+            public void valueChanged() { autoMaxX.setValue(false); }
+        }));
+        valuePanel.add(minY.getTextField(new EditableDouble.Listener() {
+            public void valueChanged() { autoMinY.setValue(false); }
+        }));
+        valuePanel.add(maxY.getTextField(new EditableDouble.Listener() {
+            public void valueChanged() { autoMaxY.setValue(false); }
+        }));
+        titlePanel.add(valuePanel,BorderLayout.CENTER);
+        northBox.add(titlePanel);
+
+        titlePanel=new JPanel(new BorderLayout());
+        titlePanel.setBorder(BorderFactory.createTitledBorder("Grid Size"));
+        autoPanel=new JPanel(new GridLayout(2,1));
+        valuePanel=new JPanel(new GridLayout(2,1));
+        autoPanel.add(new JLabel("Num X Bins"));
+        autoPanel.add(new JLabel("Num Y Bins"));
+        valuePanel.add(numXBins.getTextField(null));
+        valuePanel.add(numYBins.getTextField(null));
+        titlePanel.add(autoPanel,BorderLayout.WEST);
+        titlePanel.add(valuePanel,BorderLayout.CENTER);
+        northBox.add(titlePanel);
+
+        titlePanel=new JPanel(new GridLayout(3,1));
+        titlePanel.setBorder(BorderFactory.createTitledBorder("Point Combination Settings"));
+        titlePanel.add(weightFormula.getLabeledTextField("Weight Formula",null));
+        JPanel innerPanel=new JPanel(new BorderLayout());
+        innerPanel.add(new JLabel("Max Dist"),BorderLayout.WEST);
+        innerPanel.add(maxDist.getTextField(null),BorderLayout.CENTER);
+        titlePanel.add(innerPanel);
+        titlePanel.add(fixOnZeroDist.getCheckBox("Fix value to point when dist=0?",null));
+        northBox.add(titlePanel);
+
+        panel.add(northBox,BorderLayout.NORTH);
+
+        JButton button=new JButton("Propagate Changes");
+        button.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                abstractRedoAllElements();
+            }
+        });
+        panel.add(button,BorderLayout.SOUTH);
+        propPanel.addTab("Settings",panel);
+    }
+
+    public String getParameterDescription(int stream, int which) {
+        return "";
+    }
+
+    public String getValueDescription(int stream, int which) {
+        String[] ret={"x","y","z"};
+        return ret[which];
+    }
+
+    public GraphElement copy(List<GraphElement> l) {
+        return new InterpolatedSurfaceFilter(this,l);
+    }
+
+    public String getDescription() {
+        return "Interpolated Surface Filter";
+    }
+
+    public static String getTypeDescription() {
+        return "Interpolated Surface Filter";
+    }
+
+    private void redoBounds(int stream) {
+        int[] range=xFormula.getSafeElementRange(this,stream);
+        DataFormula.mergeSafeElementRanges(range,yFormula.getSafeElementRange(this,stream));
+        DataFormula.checkRangeSafety(range,this);
+        double xmin=1e100,xmax=-1e100,ymin=1e100,ymax=-1e100;
+        for(int i=range[0]; i<range[1]; ++i) {
+            double x=xFormula.valueOf(this,stream,i);
+            double y=yFormula.valueOf(this,stream,i);
+            if(x<xmin) xmin=x;
+            if(x>xmax) xmax=x;
+            if(y<ymin) ymin=y;
+            if(y>ymax) ymax=y;
+        }
+        if(autoMinX.getValue()) minX.setValue(xmin);
+        if(autoMaxX.getValue()) maxX.setValue(xmax);
+        if(autoMinY.getValue()) minY.setValue(ymin);
+        if(autoMaxY.getValue()) maxY.setValue(ymax);
+    }
+
+    private DataFormula xFormula=new DataFormula("v[0]");
+    private DataFormula yFormula=new DataFormula("v[1]");
+    private DataFormula zFormula=new DataFormula("1");
+    private EditableDouble minX=new EditableDouble(-1);
+    private EditableDouble maxX=new EditableDouble(1);
+    private EditableBoolean autoMinX=new EditableBoolean(true);
+    private EditableBoolean autoMaxX=new EditableBoolean(true);
+    private EditableDouble minY=new EditableDouble(-1);
+    private EditableDouble maxY=new EditableDouble(1);
+    private EditableBoolean autoMinY=new EditableBoolean(true);
+    private EditableBoolean autoMaxY=new EditableBoolean(true);
+    private EditableInt numXBins=new EditableInt(100); 
+    private EditableInt numYBins=new EditableInt(100); 
+    private DataFormula weightFormula=new DataFormula("1/dist");
+    private EditableDouble maxDist=new EditableDouble(-1);
+    private EditableBoolean fixOnZeroDist=new EditableBoolean(true);
+
+    private static final long serialVersionUID = 3792555726234383613L;
+}

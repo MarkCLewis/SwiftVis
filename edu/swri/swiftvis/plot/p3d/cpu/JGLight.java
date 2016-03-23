@@ -1,0 +1,25 @@
+package edu.swri.swiftvis.plot.p3d.cpu;
+
+// JGLight.java
+// This class defines a light source.
+
+import java.awt.*;
+
+public class JGLight extends JGObject {
+	public JGLight(JGVector p,Color c) {
+		point=p;
+		col=c;
+	}
+
+	@Override
+    public JGObject applyTransform(JGTransform t) {
+		JGLight ret=new JGLight(point,col);
+
+		ret.point.multiply(t);
+
+		return(ret);
+	}
+
+	private JGVector point;
+	private Color col;
+}

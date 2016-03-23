@@ -1,0 +1,298 @@
+/*
+ * Created on Apr 29, 2004
+ */
+package edu.swri.swiftvis.plot.p3d.raytrace;
+
+import java.awt.event.*;
+
+import javax.imageio.ImageIO;
+import javax.swing.*;
+
+import edu.swri.swiftvis.plot.p3d.Basic;
+import edu.swri.swiftvis.plot.p3d.PointLight;
+import edu.swri.swiftvis.plot.p3d.Vect3D;
+
+
+import java.io.*;
+
+import java.awt.*;
+import java.awt.image.*;
+import java.awt.geom.*;
+
+/**
+ * This class provides a ray traced image from a file.
+ * @author Mark Lewis
+ */
+public class RenderFrame {
+    public static void main(String[] args) {
+        new RenderFrame();
+    }
+    
+	public RenderFrame() {
+	    frame=new JFrame();
+		frame.getContentPane().setLayout(new BorderLayout());
+		imgIcon=new ImageIcon(new BufferedImage(200,200,BufferedImage.TYPE_INT_ARGB));
+		worldLabel=new JLabel(imgIcon);
+		frame.getContentPane().add(new JScrollPane(worldLabel),BorderLayout.CENTER);
+		JMenuBar menuBar=new JMenuBar();
+		JMenu menu=new JMenu("File");
+		JMenuItem item=new JMenuItem("Open Ring File");
+		item.addActionListener(new ActionListener() {
+		    @Override
+            public void actionPerformed(ActionEvent e) {
+		        readRings(selectFile());
+		    }
+		});
+		menu.add(item);
+		item=new JMenuItem("Open Text File");
+		item.addActionListener(new ActionListener() {
+		    @Override
+            public void actionPerformed(ActionEvent e) {
+		        readText(selectFile());
+		    }
+		});
+		menu.add(item);
+		item=new JMenuItem("Render Image");
+		item.addActionListener(new ActionListener() {
+		    @Override
+            public void actionPerformed(ActionEvent e) {
+		        launchRedrawImage();
+		    }
+		});
+		menu.add(item);
+		item=new JMenuItem("Save");
+		item.addActionListener(new ActionListener() {
+		    @Override
+            public void actionPerformed(ActionEvent e) {
+		        saveImage();
+		    }
+		});
+		menu.add(item);
+		item=new JMenuItem("Exit");
+		item.addActionListener(new ActionListener() {
+		    @Override
+            public void actionPerformed(ActionEvent e) {
+		        System.exit(0);
+		    }
+		});
+		menu.add(item);
+		menuBar.add(menu);
+		frame.setJMenuBar(menuBar);
+		frame.setSize(500,500);
+		frame.setVisible(true);
+	}
+	
+	private void launchRedrawImage() {
+	    if(tree==null) {
+	        JOptionPane.showMessageDialog(frame,"You must load a file first.");
+	        return;
+	    }
+	    String size=JOptionPane.showInputDialog(frame,"Enter the image size as x,y.");
+	    String[] parts=size.split(",");
+	    if(parts.length<2) {
+	        JOptionPane.showMessageDialog(frame,"Improper string format.");
+	        return;
+	    }
+	    final int sx=Integer.parseInt(parts[0]);
+	    final int sy=Integer.parseInt(parts[1]);
+		(new Thread(new Runnable() {
+			@Override
+            public void run() {redrawImage(sx,sy);}
+		})).start();
+	}
+	
+	private Color rayColor(Ray r,int cnt) {
+	    if(cnt>=10) return Color.black;
+		RayFollower rf=new RayFollower(r,tree);
+//		System.out.println("Ray "+r);
+		if(rf.follow()) {
+			RTGeometry geom=rf.getIntersectObject();
+//			System.out.println("Hit "+geom);
+			double[] intersect=r.point(rf.getIntersectTime());
+			double[] norm=geom.getNormal(intersect);
+			Basic.normalize(norm);
+			float[] ret=ambient.getRGBColorComponents(null);
+//	        DrawAttributes attr=geom.getAttributes();
+//	        float[] col=attr.getColor().getRGBColorComponents(null);
+	        // Check reflection
+	        // Check transparent part
+			for(int i=0; i<lights.length; ++i) {
+			    Ray toLight=new Ray(intersect,lights[i].getPosition().get());
+			    RayFollower followLight=new RayFollower(toLight,tree);
+			    if(!followLight.follow()) {
+//			        float lightMag=-(float)(r.dotProduct(toLight)/(r.mainLength()*toLight.mainLength()));
+//			        float[] lightColor=lights[i].getColor().getRGBColorComponents(null);
+			        float distFactor=(float)(toLight.mainLength()/scale);
+			        if(distFactor>1.0f) distFactor=1.0f;
+//			        System.out.println("Reached light "+i+" "+lightMag+" "+distFactor);
+//			        ret[0]+=lightColor[0]*lightMag*distFactor*col[0];
+//			        ret[1]+=lightColor[1]*lightMag*distFactor*col[1];
+//			        ret[2]+=lightColor[2]*lightMag*distFactor*col[2];
+			    }
+			}
+			return new Color(ret[0],ret[1],ret[2]);
+		}
+	    return Color.black;
+	}
+
+	private void redrawImage(int sx,int sy) {
+	    if(tree==null) return;
+		img=new BufferedImage(sx,sy,BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g=img.createGraphics();
+		g.setPaint(Color.black);
+		g.fill(new Rectangle2D.Double(0,0,img.getWidth(),img.getHeight()));
+		double[] toEye={eye[0]-screenCenter[0],eye[1]-screenCenter[1],eye[2]-screenCenter[2]};
+		double dist=Basic.distance(screenCenter,eye);
+		Basic.normalize(up);
+		double[] left=Basic.crossProduct(toEye,up);
+		Basic.normalize(left);
+		double[] loc=new double[3];
+		long start=System.currentTimeMillis();
+		for(int i=0; i<img.getWidth(); ++i) {
+			for(int j=0; j<img.getHeight(); ++j) {
+				loc[0]=screenCenter[0]-dist*left[0]*(i-0.5*img.getWidth())/img.getWidth()-
+					dist*up[0]*(j-0.5*img.getHeight())/img.getHeight();
+				loc[1]=screenCenter[1]-dist*left[1]*(i-0.5*img.getWidth())/img.getWidth()-
+					dist*up[1]*(j-0.5*img.getHeight())/img.getHeight();
+				loc[2]=screenCenter[2]-dist*left[2]*(i-0.5*img.getWidth())/img.getWidth()-
+					dist*up[2]*(j-0.5*img.getHeight())/img.getHeight();
+				Ray r=new Ray(eye,loc);
+				Color col=rayColor(r,0);
+				img.setRGB(i,j,col.getRGB());
+			}
+			if(i%10==0) {
+				System.out.println(i);
+				Thread.yield();
+			}
+		}
+		System.out.println(System.currentTimeMillis()-start);		
+		imgIcon.setImage(img);
+		worldLabel.repaint();
+		frame.validate();
+	}
+	
+	private File selectFile() {
+	    JFileChooser chooser=new JFileChooser();
+	    if(chooser.showOpenDialog(frame)!=JFileChooser.CANCEL_OPTION) {
+	        return chooser.getSelectedFile();
+	    }
+	    return null;
+	}
+	
+	private void readRings(File file) {
+	    if(file==null) return;
+	    double[] min=new double[3],max=new double[3];
+	    try {
+	        BufferedInputStream fis=new BufferedInputStream(new FileInputStream(file));
+	        int num=readInt(fis);
+//	        System.out.println("Reading "+num+" particles.");
+	        double[][] center=new double[num][3];
+	        for(int i=0; i<num; ++i) {
+	            center[i][0]=readDouble(fis);
+	            center[i][1]=readDouble(fis);
+	            center[i][2]=readDouble(fis);
+	            readDouble(fis);
+	            readDouble(fis);
+	            readDouble(fis);
+	            for(int j=0; j<3; ++j) {
+	                if(i==0 || center[i][j]<min[j]) min[j]=center[i][j];
+	                if(i==0 || center[i][j]>max[j]) max[j]=center[i][j];
+	            }
+//	            if(i%1000==0) {
+//	                System.out.println(i+" "+center[i][0]+" "+center[i][1]+" "+center[i][2]);
+//	                System.out.println(min[0]+" "+max[0]+" "+min[1]+" "+max[1]);
+//	            }
+	        }
+	        tree=new Octree(0.5*(min[0]+max[0]),0.5*(min[1]+max[1]),0.5*(min[2]*max[2]),1.1*Math.max(max[0]-min[0],max[1]-min[1]));
+	        for(int i=0; i<num; ++i) {
+//	            tree.addObject(new Sphere(center[i],readDouble(fis)));
+	        }
+	        screenCenter=new double[3];
+	        eye=new double[3];
+	        up=new double[3];
+	        screenCenter[0]=0.5*(min[0]+max[0]);
+	        screenCenter[1]=0.5*(min[1]+max[1]);
+	        screenCenter[2]=0.0;
+	        eye[0]=screenCenter[0];
+	        eye[1]=screenCenter[1];
+	        eye[2]=max[1]-min[1];
+	        up[0]=1.0;
+	        up[1]=0.0;
+	        up[2]=0.0;
+	        lights=new PointLight[2];
+	        lights[0]=new PointLight(new Vect3D(screenCenter[0]+2.0*(max[0]-min[0]),screenCenter[1],eye[2]),Color.white);
+	        lights[1]=new PointLight(new Vect3D(screenCenter[0]-2.0*(max[0]-min[0]),screenCenter[1],eye[2]),Color.orange.darker());
+	        ambient=Color.darkGray;
+	        scale=3.0*eye[2];
+	    } catch(IOException e) {
+	        e.printStackTrace();
+	        JOptionPane.showMessageDialog(frame,"Error reading in file.");
+	    }
+	}
+	
+	private void readText(File file) {
+	    
+	}
+	
+	private int readInt(InputStream is) throws IOException {
+        int[] buf=new int[4];
+        for(int i=0; i<buf.length; i++) {
+	        buf[i]=is.read();
+            if(buf[i]<0) throw new IOException("End of stream reached.");
+        }
+        return (buf[3]<<24)+(buf[2]<<16)+(buf[1]<<8)+buf[0];
+	}
+	
+	private double readDouble(InputStream is) throws IOException {
+        long[] buf=new long[8];
+        for(int i=0; i<buf.length; i++) {
+	        buf[i]=is.read();
+            if(buf[i]<0) {
+                if(i==0) throw new IOException("End of stream reached.");
+                else throw new IOException("Insufficient bytes trying to read a real*8: "+i);
+            }
+        }
+        if(buf[0]==0 && buf[1]==0 && buf[2]==0 && buf[3]==0 && buf[4]==0 && buf[5]==0 && buf[6]==0 && buf[7]==0) return 0.0;
+        if(buf[7]==0) {
+            // !!! Special form.  Need to look into this.
+            return 0.0;
+        }
+        long sign=buf[7]>>>7;
+        long exp=((buf[7]&0x007f)<<4)+(buf[6]>>>4);
+		long mant=((buf[6]&0x000f)<<48)+(buf[5]<<40)+(buf[4]<<32)+(buf[3]<<24)+(buf[2]<<16)+(buf[1]<<8)+buf[0];
+		double two52=(1l<<52);
+        double ret=1.0+(mant/two52);
+        ret*=Math.pow(2.0,exp-1023);
+        if(sign!=0) ret*=-1;
+        return ret;	    
+	}
+	
+	private void saveImage() {
+	    JFileChooser chooser=new JFileChooser();
+	    if(chooser.showSaveDialog(frame)!=JFileChooser.CANCEL_OPTION) {
+	    	try {
+	    		ImageIO.write(img,"PNG",chooser.getSelectedFile());
+	    	} catch(IOException e) {
+	    		e.printStackTrace();
+	    	}
+	    }
+	}
+
+    private JLabel worldLabel;
+
+    private ImageIcon imgIcon;
+
+	private BufferedImage img;
+	private double[] screenCenter;
+	private double[] eye;
+	private double[] up;
+
+    private JFrame frame;
+
+    private Octree tree;
+
+    private PointLight[] lights;
+
+	private Color ambient;
+	private double scale;
+}

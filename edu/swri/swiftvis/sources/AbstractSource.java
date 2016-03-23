@@ -1,0 +1,166 @@
+/*
+ * Created on Jul 7, 2004
+ */
+package edu.swri.swiftvis.sources;
+
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.Paint;
+import java.awt.Rectangle;
+import java.util.ArrayList;
+import java.util.Hashtable;
+import java.util.List;
+
+import javax.swing.JComponent;
+import javax.swing.JTabbedPane;
+
+import edu.swri.swiftvis.DataElement;
+import edu.swri.swiftvis.DataSink;
+import edu.swri.swiftvis.DataSource;
+import edu.swri.swiftvis.GraphElement;
+import edu.swri.swiftvis.GraphPanel;
+import edu.swri.swiftvis.util.GraphLabelString;
+import edu.swri.swiftvis.util.OutputInfoPanel;
+
+/**
+ * 
+ * @author Mark Lewis
+ */
+public abstract class AbstractSource implements DataSource {
+    protected AbstractSource() {}
+
+    /**
+     * This constructor is used by the copy method of subclasses.
+     * @param c The filter we are copying.
+     * @param l A list of other elements being copied.  Only links to these should go through.
+     */
+    protected AbstractSource(AbstractSource c,List<GraphElement> l) {
+        dataVect=new ArrayList<DataElement>(c.dataVect);
+        sinkVector=new ArrayList<DataSink>();
+        for(DataSink ds:c.sinkVector) {
+            if(l.contains(ds)) sinkVector.add(ds);
+        }
+        label=new GraphLabelString(c.label);
+    }
+
+    @Override
+    public Rectangle getBounds() {
+        return label.getBounds();
+    }
+
+    @Override
+    public void translate(int dx,int dy) {
+        label.translate(dx,dy);
+    }
+
+    @Override
+    public void clearData() {
+        dataVect=new ArrayList<DataElement>();
+    }
+
+    public Paint getPaint(){ return Color.black; }
+    
+    @Override
+    public void drawNode(Graphics2D g) {
+        label.draw(g);
+    }
+
+    @Override
+    public void addOutput(DataSink sink){ sinkVector.add(sink); }
+
+    @Override
+    public void removeOutput(DataSink sink){ sinkVector.remove(sink); }
+
+    @Override
+    public int getNumOutputs() {
+        return sinkVector.size();
+    }
+    
+    @Override
+    public DataSink getOutput(int which) {
+        return sinkVector.get(which);
+    }
+
+    @Override
+    public DataElement getElement(int i, int stream){
+		return dataVect.get(i);
+    }
+
+    @Override
+    public int getNumStreams() {
+        return 1;
+    }
+
+    /**
+     * Returns the number of data elements that this source has in it.  I'm using
+     * this instead of an iterator because direct access is much more efficient
+     * when trying to make tables of data.
+     * @return The number of data elements in this source.
+     */
+    @Override
+    public int getNumElements(int stream){ return dataVect.size(); }
+    
+    @Override
+    public void relink(Hashtable<GraphElement,GraphElement> linkHash) {
+        for(int i=0; i<sinkVector.size(); ++i) {
+            sinkVector.set(i,(DataSink)linkHash.get(sinkVector.get(i)));
+        }
+    }
+    
+    @Override
+    public JComponent getPropertiesPanel() {
+        if(propPanel==null) {
+            propPanel=new JTabbedPane();
+            setupSpecificPanelProperties();
+            propPanel.addTab("Output",getOutputInfoPanel());
+            propPanel.addTab("Label", label.getAreaPanel("Label"));
+        }
+        return propPanel;
+    }
+
+    protected void notifySinks() {
+        for(DataSink sink:sinkVector) {
+            sink.sourceAltered(this);
+        }
+    }
+    
+    @Override
+    public void redo() {
+    	abstractRedo2();
+    }
+    
+    @Override
+    public String toString() {
+        return label.toString();
+    }
+    
+    protected void abstractRedoAllElements() {
+        GraphPanel.instance().newWorkOrder(this);
+    }
+    
+    protected void abstractRedo2() {
+    	dataVect.clear();
+        redoAllElements();
+//        notifySinks();
+        if(oip!=null) oip.redoOutputTable();
+    }
+
+    protected abstract void redoAllElements();
+
+    protected abstract void setupSpecificPanelProperties();
+
+    protected OutputInfoPanel getOutputInfoPanel() {
+        if (oip == null)
+            oip = new OutputInfoPanel(this);
+        return oip;
+    }
+
+    private GraphLabelString label=new GraphLabelString(getDescription(),getPaint());
+
+    protected ArrayList<DataElement> dataVect = new ArrayList<DataElement>();
+    protected ArrayList<DataSink> sinkVector = new ArrayList<DataSink>();
+
+    protected transient JTabbedPane propPanel;
+    private transient OutputInfoPanel oip;
+    private static final long serialVersionUID=-3610764446026217951l;
+}

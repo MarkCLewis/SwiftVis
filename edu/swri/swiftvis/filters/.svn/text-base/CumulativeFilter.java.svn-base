@@ -1,0 +1,223 @@
+/*
+ * Created on Aug 4, 2009
+ */
+package edu.swri.swiftvis.filters;
+
+import java.awt.BorderLayout;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.swing.JButton;
+import javax.swing.JList;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+
+import edu.swri.swiftvis.DataElement;
+import edu.swri.swiftvis.DataFormula;
+import edu.swri.swiftvis.GraphElement;
+import edu.swri.swiftvis.util.EditableBoolean;
+import edu.swri.swiftvis.util.EditableString;
+
+public class CumulativeFilter extends AbstractMultipleSourceFilter {
+    public CumulativeFilter() {
+        accumulators.add(new AccumulationValue());
+    }
+    
+    private CumulativeFilter(CumulativeFilter c,List<GraphElement> l) {
+        super(c,l);
+        alreadySorted=new EditableBoolean(c.alreadySorted.getValue());
+        sortFormula=new DataFormula(c.sortFormula);
+        for(AccumulationValue av:c.accumulators) {
+            accumulators.add(new AccumulationValue(av));
+        }
+    }
+
+    @Override
+    protected boolean doingInThreads() {
+        return false;
+    }
+
+    @Override
+    protected void redoAllElements() {
+        sizeDataVectToInputStreams();
+        for(int s=0; s<getSource(0).getNumStreams(); ++s) {
+            final int ss=s;
+            Integer[] map;
+            map=new Integer[getSource(0).getNumElements(s)];
+            for(int i=0; i<map.length; ++i) map[i]=i;
+            if(!alreadySorted.getValue()) {
+                Arrays.sort(map,new Comparator<Integer>() {
+                    public int compare(Integer o1,Integer o2) {
+                        double v1=sortFormula.valueOf(CumulativeFilter.this,ss,o1);
+                        double v2=sortFormula.valueOf(CumulativeFilter.this,ss,o2);
+                        return Double.compare(v1,v2);
+                    }
+                });
+            }
+            int[] range=accumulators.get(0).accumulationFunction.getSafeElementRange(this,s);
+            for(int i=1; i<accumulators.size(); ++i) {
+                DataFormula.mergeSafeElementRanges(range,accumulators.get(i).accumulationFunction.getSafeElementRange(this,s));
+            }
+            DataFormula.checkRangeSafety(range,this);
+            double[] acc=new double[accumulators.size()];
+            float[] vals=new float[acc.length];
+            for(int i=0; i<acc.length; ++i) {
+                acc[i]=accumulators.get(i).initialValue.valueOf(this,s,0);
+            }
+            Map<String,Double> vars=new HashMap<String,Double>();
+            for(int i=range[0]; i<range[1]; ++i) {
+                for(int j=0; j<acc.length; ++j) {
+                    vars.put("last",acc[j]);
+                    acc[j]=accumulators.get(j).accumulationFunction.valueOf(this,s,map[i],null,vars);
+                    vals[j]=(float)acc[j];
+                }
+                dataVect.get(s).add(new DataElement(getSource(0).getElement(map[i],s),vals));
+            }
+        }
+    }
+
+    @Override
+    protected void setupSpecificPanelProperties() {
+        JPanel mainPanel=new JPanel(new GridLayout(2,1));
+        JPanel topPanel=new JPanel(new BorderLayout());
+        JPanel northPanel=new JPanel(new GridLayout(3,1));
+        northPanel.add(alreadySorted.getCheckBox("Is data already sorted?", null));
+        northPanel.add(sortFormula.getLabeledTextField("Sort formula", null));
+        JPanel buttonPanel=new JPanel(new GridLayout(1,2));
+        final JList accumList=new JList();
+        accumList.setListData(accumulators.toArray());
+        topPanel.add(new JScrollPane(accumList),BorderLayout.CENTER);
+        JButton button=new JButton("Add");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                accumulators.add(new AccumulationValue());
+                accumList.setListData(accumulators.toArray());
+            }
+        });
+        buttonPanel.add(button);
+        button=new JButton("Remove");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                int index=accumList.getSelectedIndex();
+                if(index<0 || accumulators.size()<2) return;
+                accumulators.remove(index);
+                accumList.setListData(accumulators.toArray());
+            }
+        });
+        buttonPanel.add(button);
+        northPanel.add(buttonPanel);
+        topPanel.add(northPanel,BorderLayout.NORTH);
+        mainPanel.add(topPanel);
+        JPanel bottomPanel=new JPanel(new BorderLayout());
+        final JPanel accumPropPanel=new JPanel(new GridLayout(1,1));
+        accumList.addListSelectionListener(new ListSelectionListener() {
+            @Override
+            public void valueChanged(ListSelectionEvent e) {
+                accumPropPanel.removeAll();
+                int index=accumList.getSelectedIndex();
+                if(index>=0) {
+                    JPanel panel=accumulators.get(index).getPropertiesPanel();
+                    accumPropPanel.add(panel);
+                }
+                accumPropPanel.revalidate();
+                accumPropPanel.repaint();
+            }
+        });
+        bottomPanel.add(accumPropPanel,BorderLayout.CENTER);
+        button=new JButton("Propogate Changes");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                abstractRedoAllElements();
+            }
+        });
+        bottomPanel.add(button,BorderLayout.SOUTH);
+        mainPanel.add(bottomPanel);
+        propPanel.addTab("Settings",mainPanel);
+    }
+    
+    @Override
+    public int getNumParameters(int stream) {
+        if(getNumSources()<1) return 0;
+        return getSource(0).getNumParameters(stream);
+    }
+
+    @Override
+    public String getParameterDescription(int stream, int which) {
+        if(getNumSources()<1) return "None";
+        return getSource(0).getParameterDescription(stream, which);
+    }
+
+    @Override
+    public int getNumValues(int stream) {
+        if(getNumSources()<1) return 0;
+        return getSource(0).getNumValues(stream)+accumulators.size();
+    }
+
+    @Override
+    public String getValueDescription(int stream, int which) {
+        if(getNumSources()<1) return "None";
+        if(which<getSource(0).getNumValues(stream)) return getSource(0).getValueDescription(stream, which);
+        return accumulators.get(which-getSource(0).getNumValues(stream)).name.getValue();
+    }
+
+    @Override
+    public GraphElement copy(List<GraphElement> l) {
+        return new CumulativeFilter(this,l);
+    }
+
+    @Override
+    public String getDescription() {
+        return "Cumulative Filter";
+    }
+    
+    public static String getTypeDescription() {
+        return "Cumulative Filter";
+    }
+    
+    private EditableBoolean alreadySorted=new EditableBoolean(false);
+    private DataFormula sortFormula=new DataFormula("v[0]");
+    private List<AccumulationValue> accumulators=new ArrayList<AccumulationValue>();
+
+    private static final long serialVersionUID = 6193013216478997671L;
+    
+    private static class AccumulationValue implements Serializable {
+        public AccumulationValue() {}
+        public AccumulationValue(AccumulationValue c) {
+            name=new EditableString(c.name.getValue());
+            initialValue=new DataFormula(c.initialValue);
+            accumulationFunction=new DataFormula(c.accumulationFunction);
+        }
+        public JPanel getPropertiesPanel() {
+            if(propPanel==null) {
+                propPanel=new JPanel(new BorderLayout());
+                JPanel northPanel=new JPanel(new GridLayout(2,1));
+                northPanel.add(initialValue.getLabeledTextField("Initial Value",null));
+                northPanel.add(accumulationFunction.getLabeledTextField("Accumulation Function",null));
+                propPanel.add(northPanel,BorderLayout.NORTH);
+            }
+            return propPanel;
+        }
+        @Override
+        public String toString() {
+            return name.getValue()+" : "+initialValue.getFormula()+" : "+accumulationFunction.getFormula();
+        }
+        private EditableString name=new EditableString("Default");
+        private DataFormula initialValue=new DataFormula("0");
+        private DataFormula accumulationFunction=new DataFormula("last+v[0]");
+        private transient JPanel propPanel;
+        private static final long serialVersionUID = 52237035458352169L;
+    }
+}

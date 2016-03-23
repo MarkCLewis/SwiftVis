@@ -1,0 +1,547 @@
+/*
+ * Created on Sep 11, 2005
+ */
+package edu.swri.swiftvis;
+
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GridLayout;
+import java.awt.Rectangle;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.util.Hashtable;
+import java.util.LinkedList;
+import java.util.List;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextField;
+import javax.swing.WindowConstants;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+
+import edu.swri.swiftvis.plot.Plot;
+import edu.swri.swiftvis.sources.AutoProcessSource;
+import edu.swri.swiftvis.sources.FileSourceInter;
+import edu.swri.swiftvis.util.EditableInt;
+import edu.swri.swiftvis.util.EditableString;
+
+/**
+ * This class is intended to allow SwiftVis users to do automatic processing
+ * of data files to make plots.  This is like an option to make movies when the
+ * frames come from different data files.  You can tell each source that pulls
+ * from a file what file it should take.
+ * 
+ * @author Mark Lewis
+ */
+public class AutoProcess {
+    public AutoProcess(GraphPanel gp) {
+        graphPanel=gp;
+        int plotCount=0;
+        for(GraphElement ge:graphPanel.getElements()) {
+            if(ge instanceof Plot) {
+                plot=(Plot)ge;
+                plotCount++;
+            }
+            if(ge instanceof AutoProcessSource) {
+                apsList.add((AutoProcessSource)ge);
+            }
+        }
+        if(plotCount>1) {
+            plotCount=0;
+            for(GraphElement ge:gp.getSelection()) {
+                if(ge instanceof Plot) {
+                    plot=(Plot)ge;
+                    plotCount++;
+                }                
+            }
+            if(plotCount!=1) {
+                JOptionPane.showMessageDialog(gp.getDrawPanel(),"You have more than one plot.  You must select the one you want exported.");
+                return;
+            }
+        }
+        if(plotCount<1) {
+            JOptionPane.showMessageDialog(gp.getDrawPanel(),"There is no plot to export.");
+            return;            
+        }
+        frame=new JFrame("Auto Process Files");
+        frame.setLayout(new GridLayout(1,2));
+        miniGraph=new MiniGraph();
+        frame.add(miniGraph);
+        Box eastBox=new Box(BoxLayout.Y_AXIS);
+        JPanel outerPanel=new JPanel(new GridLayout(2,1));
+        outerPanel.setBorder(BorderFactory.createTitledBorder("Image Settings"));
+        JPanel panel=new JPanel(new BorderLayout());
+        panel.add(new JLabel("Export Width"),BorderLayout.WEST);
+        panel.add(width.getTextField(null));
+        outerPanel.add(panel);
+        panel=new JPanel(new BorderLayout());
+        panel.add(new JLabel("Export Height"),BorderLayout.WEST);
+        panel.add(height.getTextField(null));
+        outerPanel.add(panel);
+        eastBox.add(outerPanel);
+        for(GraphElement ge:graphPanel.getElements()) {
+            if(ge instanceof FileSourceInter) {
+                FileSourceInter fsi=(FileSourceInter)ge;
+                File[] files=fsi.getFiles();
+                for(int i=0; i<files.length; ++i) {
+                    fileList.add(new FileSource(fsi,i,files[i]));
+                }
+            }
+        }
+        fileJList=new JList(fileList.toArray());
+        outerPanel=new JPanel(new BorderLayout());
+        outerPanel.setBorder(BorderFactory.createTitledBorder("Source Files"));
+        outerPanel.add(new JScrollPane(fileJList),BorderLayout.CENTER);
+        panel=new JPanel(new BorderLayout());
+        panel.add(new JLabel("File Specification"),BorderLayout.WEST);
+        final JTextField fileSpecField=new JTextField("");
+        fileSpecField.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if(lastSelected>=0) {
+                    fileList.get(lastSelected).setSpec(fileSpecField.getText());
+                    fileJList.repaint();
+                }
+            }
+        });
+        fileSpecField.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                if(lastSelected>=0) {
+                    fileList.get(lastSelected).setSpec(fileSpecField.getText());
+                    fileJList.repaint();
+                }
+            }
+        });
+        panel.add(fileSpecField);
+        outerPanel.add(panel,BorderLayout.SOUTH);
+        eastBox.add(outerPanel);
+        outerPanel=new JPanel(new GridLayout(6,1));
+        outerPanel.setBorder(BorderFactory.createTitledBorder("File Numbers and Names"));
+        panel=new JPanel(new BorderLayout());
+        panel.add(new JLabel("Start Value"),BorderLayout.WEST);
+        panel.add(startValue.getTextField(null));
+        outerPanel.add(panel);
+        panel=new JPanel(new BorderLayout());
+        panel.add(new JLabel("End Value"),BorderLayout.WEST);
+        panel.add(endValue.getTextField(null));
+        outerPanel.add(panel);
+        panel=new JPanel(new BorderLayout());
+        panel.add(new JLabel("Step"),BorderLayout.WEST);
+        panel.add(step.getTextField(null));
+        outerPanel.add(panel);
+        final JLabel dirLabel=new JLabel("No directory selected");
+        outerPanel.add(dirLabel);
+        JButton button=new JButton("Select Directory");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JFileChooser chooser=new JFileChooser(OptionsData.instance().getLastDir());
+                chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                if(chooser.showOpenDialog(frame)==JFileChooser.CANCEL_OPTION) return;
+                directory=chooser.getSelectedFile();
+                dirLabel.setText(directory.getAbsolutePath());
+            }
+        });
+        outerPanel.add(button);
+        panel=new JPanel(new BorderLayout());
+        panel.add(new JLabel("File Name Prefix"),BorderLayout.WEST);
+        panel.add(baseName.getTextField(null),BorderLayout.CENTER);
+        outerPanel.add(panel);
+        eastBox.add(outerPanel);
+        fileJList.addListSelectionListener(new ListSelectionListener() {
+            @Override
+            public void valueChanged(ListSelectionEvent e) {
+                lastSelected=fileJList.getSelectedIndex();
+                if(fileJList.getSelectedIndex()>=0) {
+                    fileSpecField.setText(((FileSource)fileJList.getSelectedValue()).spec);
+                }
+            }
+        });
+        
+        
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        button=new JButton("Process");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+            	continueRender = true;
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() { makeImages(); }                    
+                }).start();
+            }
+        });
+        buttonPanel.add(button);
+        
+        button=new JButton("Cancel");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+            	continueRender = false;
+            }
+        });
+        buttonPanel.add(button);
+        
+        eastBox.add(buttonPanel);
+        
+        frameLabel=new JLabel("Frame: No processing");
+        eastBox.add(frameLabel);
+        frame.add(eastBox);
+        frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        frame.pack();
+        frame.setVisible(true);
+    }
+    
+    private void makeImages() {
+        ProcessSource source=new ProcessSource();
+        ProcessSink sink=new ProcessSink(source);
+        for(FileSource fs:fileList) {
+            if(fs.getFormula()==null) {
+                String spec=fs.makeSpec(sink);
+                fs.source.setFile(fs.num,new File(spec));
+                fs.source.rereadFiles();
+            }
+        }
+        BufferedImage img=new BufferedImage(width.getValue(),height.getValue(),BufferedImage.TYPE_INT_ARGB);
+        for(int i=startValue.getValue(); i<=endValue.getValue() && continueRender; i+=step.getValue()) {
+            source.setParamValue(i);
+            for(FileSource fs:fileList) {
+                if(fs.getFormula()!=null) {
+                    String spec=fs.makeSpec(sink);
+                    fs.source.setFile(fs.num,new File(spec));
+                    fs.source.rereadFiles();
+                }
+            }
+            for(AutoProcessSource aps:apsList) {
+                aps.setCount(i);
+            }
+            GraphPanel.instance().blockWhileUpdatesScheduled();
+            if(baseName.getValue().length()>0) writeImage(i,img);
+        }
+    }
+    
+    private void writeImage(int num,BufferedImage img) {
+        Graphics2D g=img.createGraphics();
+        g.setBackground(Color.white);
+        g.clearRect(0,0,width.getValue(),height.getValue());
+        plot.getPlotSpec().draw(g,new Rectangle2D.Double(0,0,width.getValue(),height.getValue()), 1);
+        miniGraph.setImage(img);
+        frameLabel.setText("Frame: "+num);
+        try {
+            File file=new File(directory,baseName.getValue()+makeNum(num)+".png");
+            javax.imageio.ImageIO.write(img,"png",file);
+            Thread.sleep(100);
+        } catch(java.io.IOException e) {
+            JOptionPane.showMessageDialog(frame,"There was an exception trying to write the file.");
+            e.printStackTrace();
+        } catch(InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    public static String makeNum(int num) {
+        String ret=Integer.toString(num);
+        while(ret.length()<5) {
+            ret="0"+ret;
+        }
+        return ret;
+    }
+
+    private boolean continueRender;
+    private GraphPanel graphPanel;
+    private Plot plot;
+    private MiniGraph miniGraph;
+    private JFrame frame;
+    private JList fileJList;
+    private int lastSelected=-1;
+    private JLabel frameLabel;
+    private List<FileSource> fileList=new LinkedList<FileSource>();
+    private List<AutoProcessSource> apsList=new LinkedList<AutoProcessSource>();
+    private EditableInt startValue=new EditableInt(0);
+    private EditableInt endValue=new EditableInt(10);
+    private EditableInt step=new EditableInt(1);
+    private EditableInt width=new EditableInt(1000);
+    private EditableInt height=new EditableInt(1000);
+    private File directory=new File(".");
+    private EditableString baseName=new EditableString("export");
+    
+    private static class MiniGraph extends JPanel {
+        public MiniGraph() {
+            setPreferredSize(new Dimension(200,200));
+        }
+        public void setImage(BufferedImage i) {
+            img=i;
+            repaint();
+        }
+        @Override public Dimension getPreferredSize() {
+            return new Dimension(400,400);
+        }
+        @Override
+        protected void paintComponent(Graphics g) {
+            if(img==null) {
+                g.drawString("No Current Image",10,50);
+                return;
+            }
+            g.drawImage(img,0,0,getWidth(),getHeight(),this);
+        }
+        private BufferedImage img;
+        private static final long serialVersionUID=56987614634867l;
+    }
+    
+    public static class FileSource {
+        public FileSource(FileSourceInter fsi,int n,File f) {
+            source=fsi;
+            num=n;
+            if(f==null) setSpec("No Current File");
+            else setSpec(f.getAbsolutePath());
+        }
+        @Override
+        public String toString() {
+            return source.toString()+" - "+num+" - "+spec;
+        }
+        public DataFormula getFormula() {
+            return formula;
+        }
+        public void setSpec(String s) {
+            spec=s;
+            int pindex=spec.indexOf('#');
+            if(pindex>=0) {
+                String tmp="";
+                if(pindex>0) tmp=spec.substring(0,pindex);
+                tmp+="{p[0]}";
+                if(pindex<spec.length()-1) tmp+=spec.substring(pindex+1);
+                spec=tmp;
+            }
+            sindex=spec.indexOf('{');
+            eindex=spec.lastIndexOf('}');
+            if(sindex>=0 && eindex>=0 && sindex+1<eindex) {
+                formula=new DataFormula(spec.substring(sindex+1,eindex));
+            } else {
+                formula=null;
+            }            
+        }
+        public String makeSpec(DataSink sink) {
+            if(formula==null) return spec;
+            return spec.substring(0,sindex)+(int)formula.valueOf(sink,0, 0)+spec.substring(eindex+1);
+        }
+        public FileSourceInter getSource() { return source; }
+        public int getNumber() { return num; }
+        private final FileSourceInter source;
+        private final int num;
+        private DataFormula formula;
+        private int sindex,eindex;
+        private String spec;
+    }
+    
+    public static class ProcessSource implements DataSource {
+        public ProcessSource() {
+        }
+        
+        @Override
+        public void addOutput(DataSink s) {
+            sink=s;
+        }
+
+        @Override
+        public void removeOutput(DataSink sink) {
+        }
+
+        @Override
+        public int getNumOutputs() {
+            return 1;
+        }
+
+        @Override
+        public DataSink getOutput(int which) {
+            return sink;
+        }
+
+        @Override
+        public int getNumElements(int stream) {
+            return 1;
+        }
+
+        @Override
+        public DataElement getElement(int i, int stream) {
+            return elem;
+        }
+        
+        @Override
+        public int getNumStreams() {
+            return 1;
+        }
+
+        @Override
+        public int getNumParameters(int stream) {
+            return 1;
+        }
+
+        @Override
+        public String getParameterDescription(int stream, int which) {
+            return "File Number";
+        }
+
+        @Override
+        public int getNumValues(int stream) {
+            return 0;
+        }
+
+        @Override
+        public String getValueDescription(int stream, int which) {
+            return "";
+        }
+
+        @Override
+        public String getDescription() {
+            return "Internal Processing Source";
+        }
+
+        @Override
+        public Rectangle getBounds() {
+            return null;
+        }
+
+        @Override
+        public void translate(int dx,int dy) {
+        }
+
+        @Override
+        public void drawNode(Graphics2D g) {
+        }
+
+        @Override
+        public JComponent getPropertiesPanel() {
+            return null;
+        }
+
+        @Override
+        public GraphElement copy(List<GraphElement> l) {
+            return null;
+        }
+
+        @Override
+        public void relink(Hashtable<GraphElement, GraphElement> linkHash) {
+        }
+
+        @Override
+        public void clearData() {
+        }
+
+		@Override
+        public void redo() {
+		}
+        
+        public void setParamValue(int p) {
+            params[0]=p;
+            elem=new DataElement(params,values);
+        }
+        
+        private DataSink sink;
+        private DataElement elem;
+        private int[] params=new int[1];
+        private float[] values=new float[0];
+        private static final long serialVersionUID = 4695279713192259866L;
+    }
+    
+    public static class ProcessSink implements DataSink {
+        public ProcessSink(DataSource s) {
+            source=s;
+            source.addOutput(this);
+        }
+        
+        @Override
+        public boolean validInput(DataSource ds) {
+            return false;
+        }
+
+        @Override
+        public void addInput(DataSource input) {
+        }
+
+        @Override
+        public void removeInput(DataSource input) {
+        }
+
+        @Override
+        public void moveUpInput(int index) {
+        }
+
+        @Override
+        public int getNumSources() {
+            return 1;
+        }
+
+        @Override
+        public DataSource getSource(int which) {
+            return source;
+        }
+
+        @Override
+        public void sourceAltered(DataSource source) {            
+        }
+
+        @Override
+        public String getDescription() {
+            return "Internal Process Sink";
+        }
+
+        @Override
+        public Rectangle getBounds() {
+            return null;
+        }
+
+        @Override
+        public void translate(int dx,int dy) {
+        }
+
+        @Override
+        public void drawNode(Graphics2D g) {
+        }
+
+        @Override
+        public JComponent getPropertiesPanel() {
+            return null;
+        }
+
+        @Override
+        public GraphElement copy(List<GraphElement> l) {
+            return null;
+        }
+
+        @Override
+        public void relink(Hashtable<GraphElement, GraphElement> linkHash) {
+        }
+
+        @Override
+        public void clearData() {
+        }
+
+		@Override
+        public void redo() {
+		}
+
+        private final DataSource source;
+        private static final long serialVersionUID = 389417296293706506L;
+    }
+}

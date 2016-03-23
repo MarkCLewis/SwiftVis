@@ -1,0 +1,55 @@
+package edu.swri.swiftvis.plot.p3d.jogl;
+
+//import javax.media.opengl.GL;
+
+
+
+public class JOGLDirectionalLight {} //implements JOGLObject, JOGLLight {
+//
+//	private DirectionalLight light;
+//	private float[] color, pos;
+//	private int glLight;
+//
+//	public JOGLDirectionalLight(DirectionalLight pl, int gl) {
+//		light = pl;
+//		glLight = gl;
+//
+//		color = new float[4];
+//		color[0] = light.getColor().getRed()/255.0f;
+//		color[1] = light.getColor().getGreen()/255.0f;
+//		color[2] = light.getColor().getBlue()/255.0f;
+//		color[3] = 1.0f;
+//	}
+//
+//	@Override
+//	public void draw(GL gl) {
+//		gl.glLightfv(glLight, GL.GL_DIFFUSE, color,0);
+//		gl.glLightfv(glLight, GL.GL_POSITION, pos,0);
+//	}
+//
+//	@Override
+//	public int getType() {
+//		return JOGLObject.DirectionLight;
+//	}
+//
+//	@Override
+//	public int getLight() {
+//		return glLight;
+//	}
+//
+//	@Override
+//	public void fixValues(DataSink sink) {
+//		light.fixDirection(sink);
+//		pos = new float[4];
+//		pos[0] = (float)light.getDirection().getX();
+//		pos[1] = (float)light.getDirection().getY();
+//		pos[2] = (float)light.getDirection().getZ();
+//		pos[3] = 0.0f;
+//	}
+//	
+//	@Override
+//	public String toString() {
+//		return "directional light pointed at (" + pos[0] + "," + pos[1] + "," + pos[2] + ") with color " + color[0] + " " + color[1] + " " + color[2];
+//	}
+//
+//}

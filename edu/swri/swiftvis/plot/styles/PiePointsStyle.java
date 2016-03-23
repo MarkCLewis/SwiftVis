@@ -1,0 +1,423 @@
+/*
+ * Created on Mar 4, 2007
+ */
+package edu.swri.swiftvis.plot.styles;
+
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.geom.Arc2D;
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
+import java.io.Serializable;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTable;
+import javax.swing.table.AbstractTableModel;
+
+import edu.swri.swiftvis.BooleanFormula;
+import edu.swri.swiftvis.DataFormula;
+import edu.swri.swiftvis.DataSink;
+import edu.swri.swiftvis.plot.DataPlotStyle;
+import edu.swri.swiftvis.plot.PlotArea2D;
+import edu.swri.swiftvis.plot.PlotLegend;
+import edu.swri.swiftvis.plot.PlotTransform;
+import edu.swri.swiftvis.plot.util.ColorEditor;
+import edu.swri.swiftvis.plot.util.ColorRenderer;
+import edu.swri.swiftvis.plot.util.FontOptions;
+import edu.swri.swiftvis.plot.util.FormattedString;
+import edu.swri.swiftvis.plot.util.LegendHelper;
+import edu.swri.swiftvis.plot.util.StrokeOptions;
+import edu.swri.swiftvis.plot.util.SymbolOptions;
+import edu.swri.swiftvis.plot.util.SymbolOptions.SymbolUser;
+import edu.swri.swiftvis.util.EditableBoolean;
+import edu.swri.swiftvis.util.EditableDouble;
+import edu.swri.swiftvis.util.EditableString;
+import edu.swri.swiftvis.util.SourceMapDialog;
+
+public class PiePointsStyle implements DataPlotStyle,SymbolUser {
+    public PiePointsStyle(PlotArea2D pa) {
+        plotArea=pa;
+        pieces.add(new PiePiece());
+    }
+    
+    public PiePointsStyle(PiePointsStyle c,PlotArea2D pa) {
+        plotArea=pa;
+        name=new EditableString(c.name.getValue());
+        primaryFormula=new DataFormula(c.primaryFormula.getFormula());
+        secondaryFormula=new DataFormula(c.secondaryFormula.getFormula());
+        sizeFormula=new DataFormula(c.sizeFormula.getFormula());
+        for(PiePiece pp:c.pieces) {
+            pieces.add(new PiePiece(pp));
+        }
+        stroke=new StrokeOptions(null,c.stroke);
+        symbolOptions=new SymbolOptions(this,c.symbolOptions);
+        legend=new Legend(c.legend);
+    }
+
+    @Override
+    public DataPlotStyle copy(PlotArea2D pa) {
+        return new PiePointsStyle(this,pa);
+    }
+
+    @Override
+    public void drawToGraphics(Graphics2D g, PlotTransform trans) {
+        DataSink sink=plotArea.getSink();
+        int[] indexRange=primaryFormula.getSafeElementRange(sink, 0);
+        DataFormula.mergeSafeElementRanges(indexRange,secondaryFormula.getSafeElementRange(sink, 0));
+        DataFormula.mergeSafeElementRanges(indexRange,sizeFormula.getSafeElementRange(sink, 0));
+        for(PiePiece pp:pieces) {
+            DataFormula.mergeSafeElementRanges(indexRange,pp.formula.getSafeElementRange(sink, 0));
+        }
+        DataFormula.checkRangeSafety(indexRange,sink);
+        double[] pieceVal=new double[pieces.size()];
+        for(int i=indexRange[0]; i<indexRange[1]; ++i) {
+            double pval=primaryFormula.valueOf(sink,0, i);
+            double sval=secondaryFormula.valueOf(sink,0, i);
+            double size=sizeFormula.valueOf(sink,0, i);
+            symbolOptions.calcWidthHeight(trans,size);
+            double xSymbolSize=symbolOptions.getWidth();
+            double ySymbolSize=symbolOptions.getHeight();
+            Point2D point=trans.transform(pval,sval);
+            Rectangle2D bounds=new Rectangle2D.Double(point.getX()-xSymbolSize*0.5,point.getY()-ySymbolSize*0.5,xSymbolSize,ySymbolSize);
+            double total=0;
+            for(int j=0; j<pieces.size(); ++j) {
+                pieceVal[j]=pieces.get(j).formula.valueOf(sink,0, i);
+                total+=pieceVal[j];
+            }
+            double start=0;
+            total=360/total;
+            for(int j=0; j<pieces.size(); ++j) {
+                pieceVal[j]*=total;
+                Arc2D arc=new Arc2D.Double(bounds,start,pieceVal[j],Arc2D.PIE);
+                g.setPaint(pieces.get(j).fillColor);
+                g.fill(arc);
+                g.setPaint(pieces.get(j).borderColor);
+                g.draw(arc);
+                start+=pieceVal[j];
+            }
+        }
+    }
+
+    @Override
+    public PlotLegend getLegendInformation() {
+        return legend;
+    }
+
+    @Override
+    public JComponent getPropertiesPanel() {
+        if(propPanel==null) {
+            propPanel=new JPanel(new BorderLayout());
+            JPanel northPanel=new JPanel(new GridLayout(7,1));
+            JButton mapButton=new JButton("Remap Sources");
+            mapButton.addActionListener(new ActionListener() {
+                @Override public void actionPerformed(ActionEvent e) {
+                    Map<Integer,Integer> newSources=SourceMapDialog.showDialog(propPanel);
+                    if(newSources!=null) mapSources(newSources);
+                }
+            });
+            northPanel.add(mapButton);
+            
+            JPanel panel=new JPanel(new BorderLayout());
+            panel.add(new JLabel("Name"),BorderLayout.WEST);
+            panel.add(name.getTextField(null),BorderLayout.CENTER);
+            northPanel.add(panel);
+            northPanel.add(primaryFormula.getLabeledTextField("Primary Formula",null));
+            northPanel.add(secondaryFormula.getLabeledTextField("Secondary Formula",null));
+            northPanel.add(sizeFormula.getLabeledTextField("Size Formula",null));
+            JButton button=new JButton("Symbol Draw Options");
+            button.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) { symbolOptions.edit(); }
+            });
+            northPanel.add(button);
+            button=new JButton("Set Stroke");
+            button.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) { stroke.edit(); }
+            });
+            northPanel.add(button);
+            propPanel.add(northPanel,BorderLayout.NORTH);
+            
+            pieTable=new JTable();
+            pieTable=new JTable(new PieTableModel());
+            pieTable.setDefaultEditor(Color.class, new ColorEditor());
+            pieTable.setDefaultRenderer(Color.class,new ColorRenderer(true));
+            propPanel.add(pieTable,BorderLayout.CENTER);
+            
+            button=new JButton("Apply Changes");
+            button.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    plotArea.forceRedraw();
+                    plotArea.fireRedraw();
+                }
+            } );
+            propPanel.add(button,BorderLayout.SOUTH);
+
+        }
+        return propPanel;
+    }
+
+    @Override
+    public void redoBounds() {
+        if(bounds==null) bounds=new double[2][2];
+        DataSink sink=plotArea.getSink();
+        int[] indexRange=primaryFormula.getSafeElementRange(sink, 0);
+        DataFormula.mergeSafeElementRanges(indexRange,secondaryFormula.getSafeElementRange(sink, 0));
+        DataFormula.mergeSafeElementRanges(indexRange,sizeFormula.getSafeElementRange(sink, 0));
+        for(PiePiece pp:pieces) {
+            DataFormula.mergeSafeElementRanges(indexRange,pp.formula.getSafeElementRange(sink, 0));
+        }
+        DataFormula.checkRangeSafety(indexRange,sink);
+        bounds[0][0]=1e100;
+        bounds[0][1]=-1e100;
+        bounds[1][0]=1e100;
+        bounds[1][1]=-1e100;
+        for(int i=indexRange[0]; i<indexRange[1]; ++i) {
+            double pval=primaryFormula.valueOf(sink,0, i);
+            if(pval<bounds[0][0]) bounds[0][0]=pval;
+            if(pval>bounds[0][1]) bounds[0][1]=pval;
+            double sval=secondaryFormula.valueOf(sink,0, i);
+            if(sval<bounds[1][0]) bounds[1][0]=sval;
+            if(sval>bounds[1][1]) bounds[1][1]=sval;
+        }
+    }
+
+    @Override
+    public double[][] getBounds() {
+        if(bounds==null) redoBounds();
+        return bounds;
+    }
+    
+    public static String getTypeDescription() { return "Pie Points Plot"; }
+    
+    @Override
+    public String toString() { return name.getValue(); }
+    
+    @Override
+    public void applySymbol() {}
+
+    private void mapSources(Map<Integer,Integer> newSources) {
+        if(newSources.isEmpty()) return;
+        Field[] fields=this.getClass().getDeclaredFields();
+        for(Field f:fields) {
+            if(DataFormula.class.isAssignableFrom(f.getType())) {
+                try {
+                    ((DataFormula)f.get(this)).mapSources(newSources);
+                } catch (IllegalArgumentException e) {
+                    e.printStackTrace();
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
+            }
+            if(BooleanFormula.class.isAssignableFrom(f.getType())) {
+                try {
+                    ((BooleanFormula)f.get(this)).mapSources(newSources);
+                } catch (IllegalArgumentException e) {
+                    e.printStackTrace();
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }                
+            }
+        }
+        for(PiePiece pp:pieces) {
+            pp.formula.mapSources(newSources);
+        }
+    }
+
+    private PlotArea2D plotArea;
+    private EditableString name=new EditableString("Pie Points Plot");
+    private DataFormula primaryFormula=new DataFormula("v[0]");
+    private DataFormula secondaryFormula=new DataFormula("v[1]");
+    private DataFormula sizeFormula=new DataFormula("10");
+    private SymbolOptions symbolOptions = new SymbolOptions(this);
+    private List<PiePiece> pieces=new ArrayList<PiePiece>();
+    private double[][] bounds;
+    private Legend legend=new Legend();
+    private StrokeOptions stroke=new StrokeOptions(1,null);
+    
+    private transient JPanel propPanel;
+    private transient JTable pieTable;
+
+    private static final long serialVersionUID = 2199573200784385045L;
+
+    private static class PiePiece implements Serializable {
+        public PiePiece() {}
+        public PiePiece(PiePiece c) {
+            name=c.name;
+            formula=new DataFormula(c.formula.getFormula());
+            fillColor=c.fillColor;
+            borderColor=c.borderColor;
+        }
+        private FormattedString name=new FormattedString("Pie Piece");
+        private DataFormula formula=new DataFormula("1");
+        private Color fillColor=Color.white;
+        private Color borderColor=Color.black;
+        private static final long serialVersionUID = -3699536397345923520L;
+    }
+
+    private class Legend implements PlotLegend,Serializable {
+        public Legend() {}
+        public Legend(Legend c) {
+            showLegend=new EditableBoolean(c.showLegend.getValue());
+            relativeSize=new EditableDouble(c.relativeSize.getValue());
+        }
+        @Override
+        public JComponent getPropertiesPanel() {
+            if(propPanel==null) {
+                propPanel=new JPanel(new BorderLayout());
+                JPanel panel=new JPanel(new GridLayout(3,1));
+                panel.add(showLegend.getCheckBox("Draw Legend?",null));
+                JPanel innerPanel=new JPanel(new BorderLayout());
+                innerPanel.add(new JLabel("Relative Size"),BorderLayout.WEST);
+                innerPanel.add(relativeSize.getTextField(null),BorderLayout.CENTER);
+                panel.add(innerPanel);
+                JButton button=new JButton("Select Font");
+                button.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        font.edit();
+                    }
+                });
+                panel.add(button);
+                propPanel.add(panel,BorderLayout.NORTH);
+
+                button=new JButton("Apply Changes");
+                button.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        plotArea.forceRedraw();
+                        plotArea.fireRedraw();
+                    }
+                } );
+                propPanel.add(button,BorderLayout.SOUTH);
+            }
+            return propPanel;
+        }
+
+        @Override
+        public void drawToGraphics(Graphics2D g, Rectangle2D bounds) {
+            int totalNum=pieces.size();
+            double height=bounds.getHeight()/totalNum;
+            double top=bounds.getMinY();
+            for(PiePiece pp:pieces) {
+                Rectangle2D fillBox=new Rectangle2D.Double(bounds.getMinX()+0.1*bounds.getWidth(),top+0.1*height,bounds.getWidth()*0.3,height*0.8);
+                Rectangle2D textBox=new Rectangle2D.Double(bounds.getMinX()+0.5*bounds.getWidth(),top+0.1*height,bounds.getWidth()*0.5,height*0.8);
+                g.setPaint(pp.fillColor);
+                g.fill(fillBox);
+                g.setPaint(pp.borderColor);
+                g.setStroke(stroke.getStroke());
+                g.draw(fillBox);
+                g.setPaint(Color.black);
+                LegendHelper.drawText(g,textBox,pp.name,plotArea.getSink(),font.getFont());
+                top+=height;
+            }            
+        }
+
+        @Override
+        public boolean isDrawn() {
+            return showLegend.getValue();
+        }
+
+        @Override
+        public double relativeVerticalSize() {
+            return relativeSize.getValue();
+        }
+
+        private EditableBoolean showLegend=new EditableBoolean(false);
+        private EditableDouble relativeSize=new EditableDouble(5);
+        private FontOptions font=new FontOptions(null);
+        
+        private transient JPanel propPanel;
+        private static final long serialVersionUID = -5367690001205416939L;
+    }
+    
+    private class PieTableModel extends AbstractTableModel {
+        @Override
+        public int getColumnCount() {
+            return 4;
+        }
+
+        @Override
+        public int getRowCount() {
+            return pieces.size()+1;
+        }
+
+        @Override
+        public Object getValueAt(int rowIndex, int columnIndex) {
+            if(rowIndex>=pieces.size()) {
+                if(columnIndex<2) return "";
+                else return Color.black;
+            }
+            switch(columnIndex) {
+            case 0: return pieces.get(rowIndex).name.getValue();
+            case 1: return pieces.get(rowIndex).formula.getFormula();
+            case 2: return pieces.get(rowIndex).fillColor;
+            case 3: return pieces.get(rowIndex).borderColor;
+            default: return "";
+            }
+        }
+        
+        @Override
+        public Class<?> getColumnClass(int col) {
+            if(col<2) return String.class;
+            return Color.class;
+        }
+        
+        @Override
+        public String getColumnName(int col) {
+            switch(col) {
+            case 0: return "Label";
+            case 1: return "Formula";
+            case 2: return "Fill Color";
+            case 3: return "Line Color";
+            default: return "";
+            }
+        }
+        
+        @Override
+        public boolean isCellEditable(int row,int col) {
+            return true;
+        }
+        
+        @Override
+        public void setValueAt(Object o,int row,int col) {
+            boolean structChange=false;
+            if(row>=pieces.size()) {
+                pieces.add(new PiePiece());
+                structChange=true;
+            }
+            switch(col) {
+            case 0:
+                pieces.get(row).name=new FormattedString(o.toString());
+                break;
+            case 1:
+                pieces.get(row).formula=new DataFormula(o.toString());
+                break;
+            case 2:
+                pieces.get(row).fillColor=(Color)o;
+                break;
+            case 3:
+                pieces.get(row).borderColor=(Color)o;
+                break;
+            }
+            if(structChange) {
+                ((AbstractTableModel)pieTable.getModel()).fireTableStructureChanged();
+            } else {
+                ((AbstractTableModel)pieTable.getModel()).fireTableCellUpdated(row,col);
+            }
+        }
+        private static final long serialVersionUID = -3246445606642447383L;
+    }
+}

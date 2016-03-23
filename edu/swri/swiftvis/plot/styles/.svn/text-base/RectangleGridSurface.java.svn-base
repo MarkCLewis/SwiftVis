@@ -1,0 +1,463 @@
+/*
+ * Created on Jul 9, 2004
+ */
+package edu.swri.swiftvis.plot.styles;
+
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
+import java.io.Serializable;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Map;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+import edu.swri.swiftvis.BooleanFormula;
+import edu.swri.swiftvis.DataFormula;
+import edu.swri.swiftvis.DataSink;
+import edu.swri.swiftvis.plot.AxisOptions;
+import edu.swri.swiftvis.plot.Bounded;
+import edu.swri.swiftvis.plot.DataPlotStyle;
+import edu.swri.swiftvis.plot.PlotArea2D;
+import edu.swri.swiftvis.plot.PlotLegend;
+import edu.swri.swiftvis.plot.PlotTransform;
+import edu.swri.swiftvis.plot.util.ColorGradient;
+import edu.swri.swiftvis.plot.util.ColorModel;
+import edu.swri.swiftvis.plot.util.FormattedString;
+import edu.swri.swiftvis.plot.util.LegendHelper;
+import edu.swri.swiftvis.util.EditableBoolean;
+import edu.swri.swiftvis.util.EditableDouble;
+import edu.swri.swiftvis.util.EditableString;
+import edu.swri.swiftvis.util.SourceMapDialog;
+
+/**
+ * This class is a faster method of doing surface plots when the plot points are on a
+ * rectangular grid.  It also has an advantage over the AveragedSurface that it will plot
+ * all of the data points as values and center them at the point locations.  This is because
+ * each data point gets its own rectangle and doesn't serve as the corner for a region.
+ * @author Mark Lewis
+ */
+public final class RectangleGridSurface implements DataPlotStyle {
+    public RectangleGridSurface(PlotArea2D pa) {
+        plotArea=pa;
+        bounds=new double[2][2];
+        try {
+            redoBounds();
+        } catch(Exception e) {
+            xFormula=new DataFormula("1");
+            yFormula=new DataFormula("1");
+        }
+    }
+    
+    public RectangleGridSurface(RectangleGridSurface c,PlotArea2D pa) {
+        plotArea=pa;
+        name=new EditableString(c.name.getValue());
+        bounds=new double[c.bounds.length][c.bounds[0].length];
+        for(int i=0; i<bounds.length; ++i) {
+            for(int j=0; j<bounds[i].length; ++j) {
+                bounds[i][j]=c.bounds[i][j];
+            }
+        }
+        columnMatchFormula=new DataFormula(c.columnMatchFormula);
+        xFormula=new DataFormula(c.xFormula);
+        yFormula=new DataFormula(c.yFormula);
+        colorModel=new ColorModel(c.colorModel);
+        legendInfo=new RGLegend((RGLegend)c.legendInfo);
+        gridCenterStyle=c.gridCenterStyle;
+    }
+    
+    public String toString() { return "Rectangular Surface - "+name.getValue(); }
+
+    public static String getTypeDescription() { return "Rectangular Surface Plot"; }
+
+    public void redoBounds(){
+        if(!plotArea.hasData()) return;
+		int[] indexBounds=yFormula.getSafeElementRange(plotArea.getSink(), 0);
+        DataFormula.checkRangeSafety(indexBounds,plotArea.getSink());
+		if(indexBounds[1]>0) {
+			bounds[1][0]=yFormula.valueOf(plotArea.getSink(),0, indexBounds[0]);
+			bounds[1][1]=bounds[1][0];
+			for(int i=indexBounds[0]; i<indexBounds[1]; i++) {
+				double val=yFormula.valueOf(plotArea.getSink(),0, i);
+				if(val<bounds[1][0]) bounds[1][0]=val;
+				if(val>bounds[1][1]) bounds[1][1]=val;
+			}
+		} else {
+			bounds[1][0]=0;
+			bounds[1][1]=10;
+		}
+		indexBounds=xFormula.getSafeElementRange(plotArea.getSink(), 0);
+        DataFormula.checkRangeSafety(indexBounds,plotArea.getSink());
+		if(indexBounds[1]>indexBounds[0]) {
+			bounds[0][0]=xFormula.valueOf(plotArea.getSink(),0, indexBounds[0]);
+			bounds[0][1]=bounds[0][0];
+			for(int i=indexBounds[0]; i<indexBounds[1]; i++) {
+				double val=xFormula.valueOf(plotArea.getSink(),0, i);
+				if(val<bounds[0][0]) bounds[0][0]=val;
+				if(val>bounds[0][1]) bounds[0][1]=val;
+			}
+		} else {
+			bounds[0][0]=0;
+			bounds[0][1]=10;
+		}
+    }
+
+    /**
+     * This draws the plot into the specified Graphics object.  It assumes that
+     * the transform and clipping for that Graphics object have all been set up
+     * so that the markers can be drawn at their normal locations.  The xSize
+     * and ySize are passed in so that it can figure out how large to make the
+     * markers if needed.
+     */
+    public void drawToGraphics(Graphics2D g,PlotTransform trans){
+        DataSink sink=plotArea.getSink();
+		int[] indexBounds=xFormula.getSafeElementRange(sink, 0);
+		int[] tmp=yFormula.getSafeElementRange(sink, 0);
+		if(tmp[0]>indexBounds[0]) indexBounds[0]=tmp[0];
+		if(tmp[1]<indexBounds[1]) indexBounds[1]=tmp[1];
+		int[] tmp2=colorModel.getSafeElementRange(sink);
+		if(tmp2[0]>indexBounds[0]) indexBounds[0]=tmp2[0];
+		if(tmp2[1]<indexBounds[1]) indexBounds[1]=tmp2[1];
+		if(indexBounds[1]<=indexBounds[0]) return;
+        DataFormula.checkRangeSafety(indexBounds,plotArea.getSink());
+		double colVal=columnMatchFormula.valueOf(sink,0, indexBounds[0]);
+        int lineCount=1;
+		for(int i=indexBounds[0]+1; i<indexBounds[1] && columnMatchFormula.valueOf(sink,0, i)==colVal; i++) {
+			lineCount++;
+		}
+		if(indexBounds[1]-indexBounds[0]<2*lineCount) return;
+		double[][] xValue=new double[3][];
+		double[] yValue=new double[lineCount];
+		xValue[1]=new double[lineCount];
+		int index=0;
+		for(int i=indexBounds[0]; i<indexBounds[1] && i<indexBounds[0]+lineCount; ++i) {
+		    xValue[1][index]=xFormula.valueOf(sink,0, i);
+		    ++index;
+		}
+        if(xorDraw.getValue()) {
+            g.setXORMode(Color.BLACK);
+        }
+		for(int i=indexBounds[0]; i<indexBounds[1]; ) {
+		    if(i+lineCount<indexBounds[1]) {
+		        xValue[2]=new double[lineCount];
+				for(int j=0,k=i+lineCount; j<lineCount && k<indexBounds[1]; ++j,++k) {
+					xValue[2][j]=xFormula.valueOf(sink,0, k);
+				}
+		    }
+			for(int j=0,k=i; j<lineCount && k<indexBounds[1]; ++j,++k) {
+				yValue[j]=yFormula.valueOf(sink,0, k);
+			}
+			for(int j=0; j<lineCount && i<indexBounds[1]; ++j,++i) {
+			    double xPred,xFol,yPred,yFol;
+                if(gridCenterStyle==0) {
+    			    if(xValue[0]!=null) {
+    			        xPred=0.5*(xValue[1][j]-xValue[0][j]);
+    			    } else {
+    			        xPred=0.5*(xValue[2][j]-xValue[1][j]);
+    			    }
+    			    if(xValue[2]!=null) {
+    			        xFol=0.5*(xValue[2][j]-xValue[1][j]);
+    			    } else {
+    			        xFol=0.5*(xValue[1][j]-xValue[0][j]);
+    			    }
+    			    if(j!=0) {
+    			        yPred=0.5*(yValue[j]-yValue[j-1]);
+    			    } else {
+    			        yPred=0.5*(yValue[j+1]-yValue[j]);
+    			    }
+    			    if(j<yValue.length-1) {
+    			        yFol=0.5*(yValue[j+1]-yValue[j]);
+    			    } else {
+    			        yFol=0.5*(yValue[j]-yValue[j-1]);
+    			    }
+                } else {
+                    xPred=0;
+                    yPred=0;
+                    if(xValue[2]!=null) {
+                        xFol=xValue[2][j]-xValue[1][j];
+                    } else {
+                        xFol=xValue[1][j]-xValue[0][j];
+                    }
+                    if(j<yValue.length-1) {
+                        yFol=yValue[j+1]-yValue[j];
+                    } else {
+                        yFol=yValue[j]-yValue[j-1];
+                    }                    
+                }
+			    xPred=Math.abs(xPred);
+			    xFol=Math.abs(xFol);
+			    yPred=Math.abs(yPred);
+			    yFol=Math.abs(yFol);
+                Color col=colorModel.getColor(sink,i);
+				g.setPaint(col);
+                Point2D p1=trans.transform(xValue[1][j]-xPred,yValue[j]-yPred);
+                Point2D p2=trans.transform(xValue[1][j]+xFol,yValue[j]+yFol);
+                double x,y,w,h;
+                if(p1.getX()<p2.getX()) {
+                    x=p1.getX();
+                    w=p2.getX()-p1.getX();
+                } else {
+                    x=p2.getX();
+                    w=p1.getX()-p2.getX();
+                }
+                if(p1.getY()<p2.getY()) {
+                    y=p1.getY();
+                    h=p2.getY()-p1.getY();
+                } else {
+                    y=p2.getY();
+                    h=p1.getY()-p2.getY();
+                }
+                double xHedge=w*hedgeAmount.getValue();
+                double yHedge=h*hedgeAmount.getValue();
+				g.fill(new Rectangle2D.Double(x-xHedge,y-yHedge,w*(1+2*xHedge),h*(1+2*yHedge)));
+			}
+			xValue[0]=xValue[1];
+			xValue[1]=xValue[2];
+			xValue[2]=null;
+		}
+        g.setPaintMode();
+    }
+
+    /**
+     * Returns the min and max values for each dimension that this style
+     * supports.  The first index tells which dimension we are looking at and
+     * the second index is 0 for min and 1 for max.
+     * @return The bounds for this data.
+     */
+    public double[][] getBounds(){
+        double[][] ret=new double[bounds.length][2];
+        for(int i=0; i<bounds.length; i++) {
+            ret[i][0]=bounds[i][0];
+            ret[i][1]=bounds[i][1];
+        }
+        return ret;
+    }
+
+    public PlotLegend getLegendInformation() {
+        return legendInfo;
+    }
+
+
+    public JComponent getPropertiesPanel(){
+        if(propPanel==null) {
+            propPanel=new JPanel(new BorderLayout());
+            Box northPanel=new Box(BoxLayout.Y_AXIS);
+            JPanel outerPanel=new JPanel(new GridLayout(10,1));
+            outerPanel.setBorder(BorderFactory.createTitledBorder("Data Set "));
+
+            JButton mapButton=new JButton("Remap Sources");
+            mapButton.addActionListener(new ActionListener() {
+                @Override public void actionPerformed(ActionEvent e) {
+                    Map<Integer,Integer> newSources=SourceMapDialog.showDialog(propPanel);
+                    if(newSources!=null) mapSources(newSources);
+                }
+            });
+            outerPanel.add(mapButton);
+            
+			JPanel tmpPanel=new JPanel(new BorderLayout());
+			tmpPanel.add(new JLabel("Name"),BorderLayout.WEST);
+			tmpPanel.add(name.getTextField(null),BorderLayout.CENTER);
+			outerPanel.add(tmpPanel);
+
+            tmpPanel=new JPanel(new BorderLayout());
+			tmpPanel.add(new JLabel("Primary Formula"),BorderLayout.WEST);
+			tmpPanel.add(xFormula.getTextField(null),BorderLayout.CENTER);
+			outerPanel.add(tmpPanel);
+
+			tmpPanel=new JPanel(new BorderLayout());
+			tmpPanel.add(new JLabel("Secondary Formula"),BorderLayout.WEST);
+			tmpPanel.add(yFormula.getTextField(null),BorderLayout.CENTER);
+			outerPanel.add(tmpPanel);
+            
+            colorModel.addGUIToPanel("Color Model",outerPanel);
+
+            northPanel.add(outerPanel);
+
+			tmpPanel=new JPanel(new BorderLayout());
+			tmpPanel.add(new JLabel("Column Match Formula"),BorderLayout.WEST);
+			tmpPanel.add(columnMatchFormula.getTextField(null),BorderLayout.CENTER);
+			northPanel.add(tmpPanel);
+			northPanel.add(hedgeAmount.getLabeledTextField("Rectangle Hedge Fraction",null));
+            String[] options={"Center on data point","Center between data points"};
+            final JComboBox comboBox=new JComboBox(options);
+            comboBox.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    int index=comboBox.getSelectedIndex();
+                    if(index>=0) gridCenterStyle=index;
+                }
+            });
+            comboBox.setSelectedIndex(gridCenterStyle);
+            northPanel.add(comboBox);
+            northPanel.add(xorDraw.getCheckBox("Draw with XOR?",null));
+            
+            JButton button=new JButton("Apply Changes");
+            button.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    plotArea.forceRedraw();
+                    plotArea.fireRedraw();
+                }
+            });
+            propPanel.add(button,BorderLayout.SOUTH);
+
+            propPanel.add(northPanel,BorderLayout.NORTH);
+        }
+        return propPanel;
+    }
+
+    public RectangleGridSurface copy(PlotArea2D pa) {
+        return new RectangleGridSurface(this,pa);
+    }
+    
+    private void mapSources(Map<Integer,Integer> newSources) {
+        if(newSources.isEmpty()) return;
+        Field[] fields=this.getClass().getDeclaredFields();
+        for(Field f:fields) {
+            if(DataFormula.class.isAssignableFrom(f.getType())) {
+                try {
+                    ((DataFormula)f.get(this)).mapSources(newSources);
+                } catch (IllegalArgumentException e) {
+                    e.printStackTrace();
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
+            }
+            if(BooleanFormula.class.isAssignableFrom(f.getType())) {
+                try {
+                    ((BooleanFormula)f.get(this)).mapSources(newSources);
+                } catch (IllegalArgumentException e) {
+                    e.printStackTrace();
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }                
+            }
+        }
+    }
+
+    private EditableString name = new EditableString("Default");
+    private double[][] bounds;
+    private PlotArea2D plotArea;
+
+    private DataFormula columnMatchFormula = new DataFormula("v[0]");
+    private DataFormula xFormula = new DataFormula("v[0]");
+    private DataFormula yFormula = new DataFormula("v[1]");
+    private ColorModel colorModel=new ColorModel(ColorModel.GRADIENT_TYPE,"0",new ColorGradient(Color.black,Color.white),"1"); 
+
+    private EditableBoolean xorDraw=new EditableBoolean(false);
+    private int gridCenterStyle=1;
+    private EditableDouble hedgeAmount=new EditableDouble(0.12);
+    private RGLegend legendInfo = new RGLegend();
+
+    private transient JPanel propPanel;
+
+    private static final long serialVersionUID=9835769283746l;
+
+    private class RGLegend implements PlotLegend,Serializable,AxisOptions.AxisOptionUser,Bounded {
+        public RGLegend() {
+            ArrayList<Bounded> list=new ArrayList<Bounded>();
+            list.add(this);
+            axisOptions.setDataPlots(list);
+        }
+        public RGLegend(RGLegend c) {
+            drawn=new EditableBoolean(c.drawn.getValue());
+            drawVertical=new EditableBoolean(c.drawVertical.getValue());
+            vertSize=new EditableDouble(c.vertSize.getValue());
+            legendName=new FormattedString(c.legendName.getValue());
+            axisOptions=new AxisOptions(c.axisOptions,this);
+            ArrayList<Bounded> list=new ArrayList<Bounded>();
+            list.add(this);
+            axisOptions.setDataPlots(list);
+        }
+        public JComponent getPropertiesPanel() {
+            if(propPanel==null) {
+                propPanel=new JPanel(new BorderLayout());
+                JPanel innerPanel=new JPanel(new GridLayout(4,1));
+                if(legendName.getValue().length()<1) {
+                    legendName.setValue(name.getValue());
+                }
+                JPanel innerPanel2=new JPanel(new BorderLayout());
+                innerPanel2.add(new JLabel("Label"),BorderLayout.WEST);
+                innerPanel2.add(legendName.getTextField(null));
+                innerPanel.add(innerPanel2);
+                innerPanel.add(drawn.getCheckBox("Draw in Legend?",null));
+                innerPanel.add(drawVertical.getCheckBox("Orient Gradient Vertically?",null));
+                JPanel sizePanel=new JPanel(new BorderLayout());
+                sizePanel.add(new JLabel("Relative Vertical Size"),BorderLayout.WEST);
+                sizePanel.add(vertSize.getTextField(null),BorderLayout.CENTER);
+                innerPanel.add(sizePanel);
+                propPanel.add(innerPanel,BorderLayout.NORTH);
+                
+                propPanel.add(axisOptions.getPropertiesPanel(),BorderLayout.CENTER);
+                
+                JButton applyButton=new JButton("Apply Changes");
+                applyButton.addActionListener(new ActionListener() {
+                    public void actionPerformed(ActionEvent e) {
+                        plotArea.fireRedraw();
+                    }
+                });
+                propPanel.add(applyButton,BorderLayout.SOUTH);
+            }
+            return propPanel;
+        }
+        
+        public void drawToGraphics(Graphics2D g,Rectangle2D bounds) {
+            ColorGradient colorGradients=colorModel.getGradient();
+            if(colorGradients==null) {
+                LegendHelper.drawText(g,bounds,legendName,plotArea.getSink(),axisOptions.getFont());
+            } else {
+                LegendHelper.drawTextAndGradient(g,bounds,legendName,plotArea.getSink(),axisOptions,colorGradients,drawVertical.getValue());
+            }
+        }
+        
+        public boolean isDrawn() {
+            return drawn.getValue();
+        }
+        
+        public double relativeVerticalSize() {
+            return vertSize.getValue();
+        }
+
+        public void fireRedraw() {
+        }
+        
+        public void forceRedraw() {
+        }
+        
+        public void syncGUI() {
+            ArrayList<Bounded> list=new ArrayList<Bounded>();
+            list.add(this);
+            axisOptions.setDataPlots(list);
+        }
+        
+        public DataSink getSink() {
+            return plotArea.getSink();
+        }
+
+        public double[][] getBounds() {
+            ColorGradient colorGradients=colorModel.getGradient();
+            if(colorGradients==null) return new double[][]{{0,1},{1,0}};
+            return new double[][]{colorGradients.getBounds(),{0,1}};
+        }
+        
+        private FormattedString legendName=new FormattedString("");
+        private EditableBoolean drawn = new EditableBoolean(false);
+        private EditableBoolean drawVertical=new EditableBoolean(false);
+        private EditableDouble vertSize = new EditableDouble(3.0);
+        private AxisOptions axisOptions=new AxisOptions(this);
+        
+        private transient JPanel propPanel;
+        private static final long serialVersionUID=487235690873246l;
+    }    
+}

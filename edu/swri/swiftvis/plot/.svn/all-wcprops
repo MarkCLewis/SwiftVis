@@ -1,0 +1,83 @@
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot
+END
+PlotArea2D.java
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/PlotArea2D.java
+END
+PlotObject.java
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/PlotObject.java
+END
+PlotArea3D.java
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/PlotArea3D.java
+END
+PlotLegend.java
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/PlotLegend.java
+END
+PlotText.java
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/PlotText.java
+END
+AxisOptions.java
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/AxisOptions.java
+END
+Bounded.java
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/Bounded.java
+END
+PlotFrame.java
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/PlotFrame.java
+END
+PlotSpec.java
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/PlotSpec.java
+END
+PlotSurface.java
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/PlotSurface.java
+END
+PlotTransform.java
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/PlotTransform.java
+END
+DataPlotStyle.java
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/DataPlotStyle.java
+END
+Plot.java
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/Plot.java
+END

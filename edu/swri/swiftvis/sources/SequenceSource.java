@@ -1,0 +1,145 @@
+/*
+ * Created on Jul 7, 2004
+ */
+package edu.swri.swiftvis.sources;
+
+import java.awt.BorderLayout;
+import java.awt.GridLayout;
+import java.util.List;
+
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+import edu.swri.swiftvis.DataElement;
+import edu.swri.swiftvis.DataFormula;
+import edu.swri.swiftvis.GraphElement;
+import edu.swri.swiftvis.util.EditableDouble;
+import edu.swri.swiftvis.util.EditableInt;
+
+/**
+ * 
+ * @author Mark Lewis
+ */
+public class SequenceSource extends AbstractSource {
+    public SequenceSource() {
+        abstractRedoAllElements();
+    }
+    
+    public SequenceSource(SequenceSource c,List<GraphElement> l) {
+        super(c,l);
+        start=new EditableDouble(c.start.getValue());
+        end=new EditableDouble(c.end.getValue());
+        num=new EditableInt(c.num.getValue());
+        abstractRedoAllElements();
+    }
+
+    public static String getTypeDescription(){ return "Sequence"; }
+
+    /* (non-Javadoc)
+     * @see edu.swri.swiftvis.DataSource#getNumParameters()
+     */
+    @Override
+    public int getNumParameters(int stream) {
+        return 0;
+    }
+
+    /* (non-Javadoc)
+     * @see edu.swri.swiftvis.DataSource#getParameterDescription(int)
+     */
+    @Override
+    public String getParameterDescription(int stream, int which) {
+        return null;
+    }
+
+    /* (non-Javadoc)
+     * @see edu.swri.swiftvis.DataSource#getNumValues()
+     */
+    @Override
+    public int getNumValues(int stream) {
+        return 1;
+    }
+
+    /* (non-Javadoc)
+     * @see edu.swri.swiftvis.DataSource#getValueDescription(int)
+     */
+    @Override
+    public String getValueDescription(int stream, int which) {
+        return "Sequence";
+    }
+
+    /* (non-Javadoc)
+     * @see edu.swri.swiftvis.DataSource#getSortFormulas()
+     */
+    public DataFormula[] getSortFormulas() {
+        DataFormula[] forms={new DataFormula("v[0]")};
+        return forms;
+    }
+
+    /* (non-Javadoc)
+     * @see edu.swri.swiftvis.GraphElement#getDescription()
+     */
+    @Override
+    public String getDescription() {
+        return "Sequence";
+    }
+
+    /* (non-Javadoc)
+     * @see edu.swri.swiftvis.GraphElement#getPropertiesPanel()
+     */
+    @Override
+    protected void setupSpecificPanelProperties() {
+        JPanel outerPanel=new JPanel(new BorderLayout());
+        JPanel northPanel=new JPanel(new GridLayout(3,1));
+        JPanel innerPanel=new JPanel(new BorderLayout());
+        innerPanel.add(new JLabel("Starting Value"),BorderLayout.WEST);
+        innerPanel.add(start.getTextField(new EditableDouble.Listener() {
+            @Override
+            public void valueChanged() {
+                abstractRedoAllElements();
+            }
+        }),BorderLayout.CENTER);
+        northPanel.add(innerPanel);
+        innerPanel=new JPanel(new BorderLayout());
+        innerPanel.add(new JLabel("Ending Value"),BorderLayout.WEST);
+        innerPanel.add(end.getTextField(new EditableDouble.Listener() {
+            @Override
+            public void valueChanged() {
+                abstractRedoAllElements();
+            }
+        }),BorderLayout.CENTER);
+        northPanel.add(innerPanel);
+        innerPanel=new JPanel(new BorderLayout());
+        innerPanel.add(new JLabel("Num. Elements"),BorderLayout.WEST);
+        innerPanel.add(num.getTextField(new EditableInt.Listener() {
+            @Override
+            public void valueChanged() {
+                abstractRedoAllElements();
+            }
+        }),BorderLayout.CENTER);
+        northPanel.add(innerPanel);
+        outerPanel.add(northPanel,BorderLayout.NORTH);
+        propPanel.add("Settings",outerPanel);
+    }
+    
+    @Override
+    public SequenceSource copy(List<GraphElement> l) {
+        return new SequenceSource(this,l);
+    }
+
+    @Override
+    protected void redoAllElements() {
+        int[] params=new int[0];
+        float[] vals=new float[1];
+        for(int i=0; i<num.getValue(); ++i) {
+            vals[0]=(float)(start.getValue()+i*(end.getValue()-start.getValue())/(num.getValue()-1));
+            dataVect.add(new DataElement(params,vals));
+        }
+    }
+    
+    private EditableDouble start=new EditableDouble(0.0);
+    private EditableDouble end=new EditableDouble(1.0);
+    private EditableInt num=new EditableInt(10);
+
+    private static final long serialVersionUID=6698346981248172l;
+
+}

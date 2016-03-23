@@ -1,0 +1,101 @@
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/util
+END
+ColorEditor.java
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/util/ColorEditor.java
+END
+FontOptions.java
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/util/FontOptions.java
+END
+FillUser.java
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/util/FillUser.java
+END
+FormattedString.java
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/util/FormattedString.java
+END
+ColorIndicator.java
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/util/ColorIndicator.java
+END
+ShapeCreator.java
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/util/ShapeCreator.java
+END
+ColorModel.java
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/util/ColorModel.java
+END
+ColorRenderer.java
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/util/ColorRenderer.java
+END
+StrokeOptions.java
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/util/StrokeOptions.java
+END
+SymbolOptions.java
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/util/SymbolOptions.java
+END
+NumberFormatter.java
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/util/NumberFormatter.java
+END
+PlottingHelper.java
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/util/PlottingHelper.java
+END
+FillOptions.java
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/util/FillOptions.java
+END
+LegendHelper.java
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/util/LegendHelper.java
+END
+FontUser.java
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/util/FontUser.java
+END
+ColorGradient.java
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/util/ColorGradient.java
+END

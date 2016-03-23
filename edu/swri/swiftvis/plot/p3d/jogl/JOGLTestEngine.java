@@ -1,0 +1,296 @@
+package edu.swri.swiftvis.plot.p3d.jogl;
+
+//import com.sun.opengl.util.Screenshot;
+
+
+
+public class JOGLTestEngine {} //implements RenderEngine {
+//
+//	private PlotArea3D plot;
+//	private GLDrawableFactory fac;
+//	private GLCapabilities glCap;
+//	private GLPbuffer buffer;
+//	private int bufferHeight, bufferWidth;
+//	private Render renderer;
+//	private transient JPanel propPanel;
+//	private int curLight;
+//	private AmbientLight ambientLight;
+//	public static final String[] renderChoices = {"Fastest","Nicest"};
+//
+//	public JOGLTestEngine(PlotArea3D pA) {
+//		plot = pA;
+//
+//		// Set Up Render Capabilities and Context
+//		glCap = new GLCapabilities();		
+//		glCap.setDoubleBuffered(false);
+//
+//		// Make a Factory and a Pbuffer
+//		fac = GLDrawableFactory.getFactory();
+//
+//		bufferHeight = 600;
+//		bufferWidth = 600;
+//
+//		if (!fac.canCreateGLPbuffer()) {
+//			System.out.println("CRITICAL ERROR - OPENGL IS BAD");
+//			return;
+//		}
+//
+//		buffer = fac.createGLPbuffer(glCap, null, bufferWidth, bufferHeight, null);
+//
+//		renderer = new Render(plot);		
+//		buffer.addGLEventListener(renderer);
+//		
+//		ambientLight=new AmbientLight(new Color(20,20,20));
+//		
+//		renderer.add(new JOGLAmbientLight(ambientLight));
+//		
+//		curLight = GL.GL_LIGHT0;
+//
+//	}
+//
+//	@Override
+//	public void add(Sphere3D s, DrawAttributes attrs) {
+//		renderer.add(new JOGLSphere(s,attrs));
+//	}
+//
+//	@Override
+//	public void add(Triangle3D t, DrawAttributes[] attrs) {
+//		renderer.add(new JOGLTriangle(t,attrs[0]));
+//	}
+//
+//	@Override
+//	public void addDirectionalLight(DirectionalLight dl) {
+//		if (curLight >= GL.GL_LIGHT7) {
+//			JOptionPane.showMessageDialog(null,"OpenGL only supports a maximum of 8 lights.");
+//			return;
+//		}
+//		
+//		renderer.add(new JOGLDirectionalLight(dl,curLight));
+//		curLight += 1;
+//	}
+//
+//	@Override
+//	public void addPointLight(PointLight pl) {
+//		if (curLight >= GL.GL_LIGHT7) {
+//			JOptionPane.showMessageDialog(null,"OpenGL only supports a maximum of 8 lights.");
+//			return;
+//		}
+//
+//		renderer.add(new JOGLPointLight(pl,curLight));
+//		curLight += 1;
+//	}
+//
+//	@Override
+//	public Image sceneComplete(int imgWidth, int imgHeight) {
+//		if (bufferHeight != imgHeight || bufferWidth != imgWidth) {
+//			bufferHeight = imgHeight;
+//			bufferWidth = imgWidth;
+//			buffer = fac.createGLPbuffer(glCap, null, bufferWidth, bufferHeight, null);	
+//			buffer.addGLEventListener(renderer);
+//		}
+//
+//		buffer.display();
+//		GLContext context =  buffer.createContext(null);
+//		context.makeCurrent();
+//		BufferedImage img = Screenshot.readToBufferedImage(bufferWidth,bufferHeight);    
+//		context.release();
+//		context.destroy();
+//		return img;
+//	}
+//
+//	@Override
+//	public Image cameraMoved() {
+//		buffer.addGLEventListener(renderer);
+//		buffer.display();
+//		GLContext context =  buffer.createContext(null);
+//		context.makeCurrent();
+//		BufferedImage img = Screenshot.readToBufferedImage(bufferWidth,bufferHeight);    
+//		context.release();
+//		context.destroy();
+//		return img;
+//	}
+//
+//	@Override
+//	public void clearScene() {
+//		renderer.clear();
+//		curLight = GL.GL_LIGHT0;
+//	}
+//
+//	@Override
+//	public JComponent getPropertiesPanel() {
+//		if(propPanel==null) {
+//			propPanel=new JPanel(new BorderLayout());
+//			JPanel mainPanel = new JPanel(new GridLayout(1,1));
+//			
+//			mainPanel.add(new JLabel("No Options Currently Available"));
+//			 
+////			mainPanel.add(new JLabel("GL Draw Quality")); // Fastest or Nicest
+////			final JComboBox renderQuality=new JComboBox(renderChoices);
+////			renderQuality.addActionListener(new ActionListener() {
+////                public void actionPerformed(ActionEvent e) {
+////                    int choice=renderQuality.getSelectedIndex();
+////                    if (choice == 0) {
+////                    	renderer.setGLHint(GL.GL_FASTEST);
+////                    } else {
+////                    	renderer.setGLHint(GL.GL_NICEST);
+////                    }
+////                }
+////            });
+////			mainPanel.add(renderQuality);
+//			
+//			
+//			propPanel.add(mainPanel,BorderLayout.NORTH);
+//		}
+//		return propPanel;
+//	}
+//
+//	@Override
+//	public void setAmbientLight(AmbientLight al) {
+//		ambientLight = al;
+//		renderer.add(new JOGLAmbientLight(ambientLight));
+//	}
+//
+//
+//	private class Render implements GLEventListener {
+//
+//		private List<JOGLSphere> spheres;
+//		private List<JOGLTriangle> triangles;
+//		private List<JOGLLight> lights;
+//		private int renderHint;
+//		private GLU glu;
+//		private PlotArea3D plot;
+//		private double[][] cam;
+//
+//		public Render(PlotArea3D p) {
+//			glu = new GLU();
+//			spheres = new LinkedList<JOGLSphere>();
+//			triangles = new LinkedList<JOGLTriangle>();
+//			lights = new LinkedList<JOGLLight>();
+//			plot = p;
+//		}
+//
+//		public void add(JOGLSphere s) {
+//			spheres.add(s);
+//		}
+//
+//		public void add(JOGLTriangle t) {
+//			triangles.add(t);
+//		}
+//
+//		public void add(JOGLLight l) {
+//			lights.add(l);
+//		}
+//
+//		public int numLights() {
+//			return lights.size();
+//		}
+//
+//		public void clear() {
+//			triangles.clear();
+//			spheres.clear();
+//			lights.clear();
+//		}
+//
+//		private void updateCamera(GL gl) {
+//			gl.glMatrixMode(GL.GL_PROJECTION);
+//			gl.glLoadIdentity();
+//
+//			Camera3D camera=plot.getCamera();
+//			DataSink sink=plot.getSink();
+//			Vect3D center=camera.getCenter(sink);
+//			Vect3D forward=camera.getForward(sink);
+//			Vect3D up=camera.getUp(sink);
+//
+//			cam = new double[3][3];
+//			cam[0][0] = center.getX();
+//			cam[0][1] = center.getY();
+//			cam[0][2] = center.getZ();
+//			cam[1][0] = center.getX()+forward.getX();
+//			cam[1][1] = center.getY()+forward.getY();
+//			cam[1][2] = center.getZ()+forward.getZ();
+//			cam[2][0] = up.getX();
+//			cam[2][1] = up.getY();
+//			cam[2][2] = up.getZ();
+//
+//			glu.gluPerspective(45.0f, buffer.getWidth() / buffer.getHeight(), 0.01f,1000.0f);
+//			glu.gluLookAt(cam[0][0],cam[0][1],cam[0][2],cam[1][0],cam[1][1],cam[1][2],cam[2][0],cam[2][1],cam[2][2]);
+//		}
+//		
+//		@Override
+//		public void display(GLAutoDrawable glDrawable) {
+//			final GL gl = glDrawable.getGL();
+//			updateCamera(gl);
+//
+//			gl.glMatrixMode(GL.GL_MODELVIEW);
+//			gl.glLoadIdentity();
+//
+//			gl.glClear(GL.GL_COLOR_BUFFER_BIT);
+//			gl.glClear(GL.GL_DEPTH_BUFFER_BIT);
+//
+//			gl.glBegin(GL.GL_TRIANGLES);
+//			for (JOGLTriangle triangle: triangles) {
+//				triangle.draw(gl);
+//			}
+//			gl.glEnd();
+//
+//			for(JOGLSphere sphere : spheres) {
+//				sphere.draw(gl);
+//			}
+//
+//			for(int i = 0; i < 8; i++) {
+//				gl.glDisable(GL.GL_LIGHT0 + i);
+//			}
+//			gl.glDisable(GL.GL_LIGHTING);
+//			
+//			if (lights.size() <= 0) 
+//				return;
+//
+//			gl.glEnable(GL.GL_LIGHTING);
+//			gl.glEnable(GL.GL_REFLECTION_MAP);
+//			for(JOGLLight light : lights) {
+//				gl.glEnable(light.getLight());
+//				light.fixValues(plot.getSink());
+//				light.draw(gl);
+//			}
+//		}
+//
+//		@Override
+//		public void displayChanged ( GLAutoDrawable drawable, boolean modeChanged, boolean deviceChanged ) {
+//
+//		}
+//
+//		@Override
+//		public void init(GLAutoDrawable glDrawable) {
+//			GL gl = glDrawable.getGL();
+//			gl.glShadeModel(GL.GL_SMOOTH);
+//			gl.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+//			gl.glClearDepth(1.0f);
+//			gl.glEnable(GL.GL_DEPTH_TEST);
+//			gl.glDepthFunc(GL.GL_LEQUAL);
+//			gl.glHint(GL.GL_PERSPECTIVE_CORRECTION_HINT, GL.GL_NICEST);
+//		}
+//
+//		@Override
+//		public void reshape ( GLAutoDrawable glDrawable, int x, int y, int width, int height ) {
+//			GL gl = glDrawable.getGL();
+//			if(height <= 0) {
+//				height = 1;
+//			}
+//			float h = (float)width / (float)height;
+//			gl.glMatrixMode(GL.GL_PROJECTION);
+//			gl.glLoadIdentity();
+//			glu.gluPerspective(50.0f, h, 1.0, 1000.0);
+//			gl.glMatrixMode(GL.GL_MODELVIEW);
+//			gl.glLoadIdentity();
+//		}
+//		
+//		public void setGLHint(int hint) {
+//			renderHint = hint;
+//		}
+//
+//	}
+//
+//	public String toString() {
+//		return "JOGL Rendering Engine";
+//	}
+//}

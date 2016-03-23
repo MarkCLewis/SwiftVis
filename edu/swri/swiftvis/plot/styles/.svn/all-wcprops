@@ -1,0 +1,89 @@
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/styles
+END
+BarStyle.java
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/styles/BarStyle.java
+END
+HistogramStyle.java
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/styles/HistogramStyle.java
+END
+SchemeStyle.java
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/styles/SchemeStyle.java
+END
+VectorFieldStyle.java
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/styles/VectorFieldStyle.java
+END
+AveragedStreamlines.java
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/styles/AveragedStreamlines.java
+END
+RectangleGridSurface.java
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/styles/RectangleGridSurface.java
+END
+OrbitStyle.java
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/styles/OrbitStyle.java
+END
+PolygonStyle.java
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/styles/PolygonStyle.java
+END
+AveragedSurface.java
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/styles/AveragedSurface.java
+END
+ScriptStyle.java
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/styles/ScriptStyle.java
+END
+IsoLineSurface.java
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/styles/IsoLineSurface.java
+END
+ImageAdder.java
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/styles/ImageAdder.java
+END
+ScatterStyle.java
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/styles/ScatterStyle.java
+END
+PiePointsStyle.java
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/styles/PiePointsStyle.java
+END

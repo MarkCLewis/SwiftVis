@@ -1,0 +1,136 @@
+/*
+ * Created on Aug 1, 2009
+ */
+package edu.swri.swiftvis.util;
+
+import java.awt.BorderLayout;
+import java.awt.Container;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.swing.JButton;
+import javax.swing.JDialog;
+import javax.swing.JFrame;
+import javax.swing.JList;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+
+public class SourceMapDialog {
+    public static Map<Integer,Integer> showDialog(Container parent) {
+        while(parent.getParent()!=null && parent.getParent()!=parent) {
+            parent=parent.getParent();
+        }
+        final JDialog dialog=new JDialog((JFrame)parent,"Source Map Dialog",true);
+        final List<MapPair> pairs=new ArrayList<MapPair>();
+        pairs.add(new MapPair());
+        dialog.setLayout(new BorderLayout());
+        JPanel centerPanel=new JPanel(new GridLayout(2,1));
+        JPanel listPanel=new JPanel(new BorderLayout());
+        final JList pairList=new JList();
+        pairList.setListData(pairs.toArray());
+        final JPanel propPanel=new JPanel(new GridLayout(1,1));
+        pairList.addListSelectionListener(new ListSelectionListener() {
+            @Override
+            public void valueChanged(ListSelectionEvent arg0) {
+                int index=pairList.getSelectedIndex();
+                if(index<0) return;
+                propPanel.removeAll();
+                propPanel.add(pairs.get(index).getPropertiesPanel(pairList));
+                propPanel.revalidate();
+                propPanel.repaint();
+            }
+        });
+        listPanel.add(new JScrollPane(pairList),BorderLayout.CENTER);
+        JPanel listButtonPanel=new JPanel(new GridLayout(1,2));
+        JButton button=new JButton("Add");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                pairs.add(new MapPair());
+                pairList.setListData(pairs.toArray());
+            }
+        });
+        listButtonPanel.add(button);
+        button=new JButton("Remove");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int index=pairList.getSelectedIndex();
+                if(index<0) return;
+                pairs.remove(index);
+                pairList.setListData(pairs.toArray());
+                propPanel.removeAll();
+                propPanel.revalidate();
+                propPanel.repaint();
+            }
+        });
+        listButtonPanel.add(button);
+        listPanel.add(listButtonPanel,BorderLayout.SOUTH);
+        centerPanel.add(listPanel);
+        centerPanel.add(propPanel);
+        dialog.add(centerPanel,BorderLayout.CENTER);
+        JPanel buttonPanel=new JPanel();
+        button=new JButton("Ok");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+               dialog.setVisible(false);
+            }
+        });
+        buttonPanel.add(button);
+        button=new JButton("Cancel");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                pairs.clear();
+                dialog.setVisible(false);
+            }
+        });
+        buttonPanel.add(button);
+        dialog.add(buttonPanel,BorderLayout.SOUTH);
+        dialog.setSize(500,500);
+        dialog.setVisible(true);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        Map<Integer,Integer> ret=new HashMap<Integer, Integer>();
+        for(MapPair mp:pairs) {
+            ret.put(mp.from.getValue(),mp.to.getValue());
+        }
+        return ret;
+    }
+    
+    private static class MapPair {
+        public JPanel getPropertiesPanel(final JList list) {
+            if(propPanel==null) {
+                propPanel=new JPanel(new BorderLayout());
+                JPanel northPanel=new JPanel(new GridLayout(2,1));
+                northPanel.add(from.getLabeledTextField("From:",new EditableInt.Listener() {
+                    @Override
+                    public void valueChanged() {
+                        list.repaint();
+                    }
+                }));
+                northPanel.add(to.getLabeledTextField("To:",new EditableInt.Listener() {
+                    @Override
+                    public void valueChanged() {
+                        list.repaint();
+                    }
+                }));
+                propPanel.add(northPanel,BorderLayout.NORTH);
+            }
+            return propPanel;
+        }
+        public String toString() {
+            return from.getValue()+" -> "+to.getValue();
+        }
+        private EditableInt from=new EditableInt(0);
+        private EditableInt to=new EditableInt(1);
+        private JPanel propPanel; 
+    }
+}

@@ -1,0 +1,65 @@
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/jogl
+END
+JOGLPointLight.java
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/jogl/JOGLPointLight.java
+END
+JOGLTestEngine.java
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/jogl/JOGLTestEngine.java
+END
+JOGLEngine.java
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/jogl/JOGLEngine.java
+END
+JOGLLight.java
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/jogl/JOGLLight.java
+END
+JOGLTest.java
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/jogl/JOGLTest.java
+END
+JOGLObject.java
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/jogl/JOGLObject.java
+END
+JOGLAmbientLight.java
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/jogl/JOGLAmbientLight.java
+END
+JOGLSphere.java
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/jogl/JOGLSphere.java
+END
+JOGLDirectionalLight.java
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/jogl/JOGLDirectionalLight.java
+END
+JOGLTriangle.java
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/!svn/ver/3/SWIFTVis/edu/swri/swiftvis/plot/p3d/jogl/JOGLTriangle.java
+END

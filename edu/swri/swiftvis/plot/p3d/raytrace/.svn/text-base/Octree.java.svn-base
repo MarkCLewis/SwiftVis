@@ -1,0 +1,71 @@
+/*
+ * Created on Dec 27, 2003
+ */
+
+package edu.swri.swiftvis.plot.p3d.raytrace;
+
+import java.util.ArrayList;
+
+
+/**
+ * This class is the class for the octree that keeps track of all the objects
+ * in the world.  Because I don't want to put so many methods in this one class
+ * I'm putting the node for the class as a separate public class.
+ * @author Mark Lewis
+ */
+public final class Octree {
+	public static Octree getPrimaryTree() {
+		return primary;
+	}
+	
+	public static void createPrimaryTree(double size) {
+		if(primary!=null) {
+			throw new RuntimeException("Trying to create a second primary octree.");
+		}
+		primary=new Octree(size);
+	}
+	
+	public Octree(double size) {
+		root=new OctreeNode(0,0,0,size);
+	}
+	
+	public Octree(double cx,double cy,double cz,double size) {
+		root=new OctreeNode(cx,cy,cz,size);
+	}
+	
+	public synchronized void addObject(RTGeometry obj) {
+		root.addObject(obj);
+	}
+	
+    public OctreeNode getRoot() {
+        return root;
+    }
+
+	
+	public OctreeNode getSmallestEnclosingNode(double x,double y,double z) {
+		OctreeNode ret=root,temp=ret.getChildByPosition(x,y,z);
+		while(temp!=null) {
+			ret=temp;
+			temp=ret.getChildByPosition(x,y,z);
+		}
+		return ret;
+	}
+	
+	/**
+	 * Calls the visitor on every WorldObject in the tree that overlaps with the
+	 * sphere region.
+	 * @param region The sphere to check overlap against.
+	 * @param visitor The visitor to call on each object.
+	 */
+//	public void visitTree(Sphere region,OctreeVisitor visitor) {
+//		root.visitNodeRecur(region,visitor);
+//	}
+
+    private OctreeNode root;
+
+	private static Octree primary;
+	
+	public static interface OctreeVisitor {
+		void visitGeometry(RTGeometry wo);
+	}
+}

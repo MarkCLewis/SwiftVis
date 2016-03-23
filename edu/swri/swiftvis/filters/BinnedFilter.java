@@ -1,0 +1,910 @@
+package edu.swri.swiftvis.filters;
+
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+
+import edu.swri.swiftvis.DataElement;
+import edu.swri.swiftvis.DataFormula;
+import edu.swri.swiftvis.DataSource;
+import edu.swri.swiftvis.GraphElement;
+import edu.swri.swiftvis.util.EditableBoolean;
+import edu.swri.swiftvis.util.EditableDouble;
+import edu.swri.swiftvis.util.EditableInt;
+import edu.swri.swiftvis.util.EditableString;
+
+/**
+ * 
+ * This filter is intended to provide the user with the ability to bin the input
+ * values in one or more dimensions.  This can be done either by simple counting of
+ * how many elements land in each bin, or by taking the average value of some
+ * expression on the elements that land in the bin.  This can be plotted up by
+ * passing it to something like an AveragedSurface plot that will draw the surface
+ * or bins and nicely color them.
+ * 
+ * The tabulation of the bins is done in a pseudo-sparse manner.  The standard output
+ * is not sparse because it takes significantly more logic to plot that.
+ */
+public class BinnedFilter extends AbstractMultipleSourceFilter {
+    public BinnedFilter() {
+        coordinateData=new ArrayList<CoordinateData>();
+        coordinateData.add(new CoordinateData());
+        valueSpecs=new ArrayList<BinValueSpec>();
+        valueSpecs.add(new BinValueSpec());
+    }
+
+    private BinnedFilter(BinnedFilter c,List<GraphElement> l) {
+        super(c,l);
+        coordinateData=new ArrayList<CoordinateData>();
+        for(CoordinateData cd:c.coordinateData) {
+            coordinateData.add(new CoordinateData(cd));
+        }
+        valueSpecs=new ArrayList<BinValueSpec>();
+        for(BinValueSpec bvs:c.valueSpecs) {
+            valueSpecs.add(new BinValueSpec(bvs));
+        }
+        addAveragedSurfaceBuffers=c.addAveragedSurfaceBuffers;
+        makeFinalDataSparse=c.makeFinalDataSparse;
+    }
+
+    @Override
+    public String getDescription(){ return "Binned Filter"; }
+
+    public static String getTypeDescription(){ return "Binned Filter"; }
+
+    @Override
+    protected void setupSpecificPanelProperties(){
+        JPanel outerPanel=new JPanel(new BorderLayout());
+        Box northBox=Box.createVerticalBox();
+
+        JPanel innerPanel=new JPanel(new BorderLayout());
+        innerPanel.setBorder(BorderFactory.createTitledBorder("Coordinates"));
+        coordinatePanel=new JPanel(new GridLayout(1,1));
+        innerPanel.add(coordinatePanel,BorderLayout.SOUTH);
+        coordinateList=new JList(coordinateData.toArray());
+        coordinateList.setPreferredSize(new Dimension(300,100));
+        coordinateList.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+            @Override
+            public void valueChanged(ListSelectionEvent e) { newCoordinateSelected(); }
+        } );
+        coordinateList.setSelectedIndex(0);
+        innerPanel.add(new JScrollPane(coordinateList),BorderLayout.NORTH);
+        JPanel innerPanel2=new JPanel(new GridLayout(1,2));
+        JButton button=new JButton("Add");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { addCoordinate(); }
+        } );
+        innerPanel2.add(button);
+        button=new JButton("Remove");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { removeCoordinate(); }
+        } );
+        innerPanel2.add(button);
+        innerPanel.add(innerPanel2,BorderLayout.CENTER);
+        northBox.add(innerPanel);
+
+        innerPanel=new JPanel(new BorderLayout());
+        innerPanel.setBorder(BorderFactory.createTitledBorder("Bin Values"));
+        valuePanel=new JPanel(new GridLayout(1,1));
+        innerPanel.add(valuePanel,BorderLayout.SOUTH);
+        valueList=new JList(valueSpecs.toArray());
+        valueList.setPreferredSize(new Dimension(300,100));
+        valueList.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+            @Override
+            public void valueChanged(ListSelectionEvent e) { newValueSelected(); }
+        } );
+        valueList.setSelectedIndex(0);
+        innerPanel.add(new JScrollPane(valueList),BorderLayout.NORTH);
+        innerPanel2=new JPanel(new GridLayout(1,2));
+        button=new JButton("Add");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { addValue(); }
+        } );
+        innerPanel2.add(button);
+        button=new JButton("Remove");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { removeValue(); }
+        } );
+        innerPanel2.add(button);
+        innerPanel.add(innerPanel2,BorderLayout.CENTER);
+        northBox.add(innerPanel);
+
+        final JCheckBox bufferCheckBox=new JCheckBox("Add Points for Averaged Surface?");
+        bufferCheckBox.setSelected(addAveragedSurfaceBuffers);
+        bufferCheckBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { addAveragedSurfaceBuffers=bufferCheckBox.isSelected(); }
+        } );
+        northBox.add(bufferCheckBox);
+
+        final JCheckBox sparseCheckBox=new JCheckBox("Output Sparse Data?");
+        sparseCheckBox.setSelected(makeFinalDataSparse);
+        sparseCheckBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { makeFinalDataSparse=sparseCheckBox.isSelected(); }
+        } );
+        northBox.add(sparseCheckBox);
+
+        outerPanel.add(northBox,BorderLayout.NORTH);
+
+        button=new JButton("Propagate Changes");
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) { abstractRedoAllElements(); }
+        } );
+        outerPanel.add(button,BorderLayout.SOUTH);
+        propPanel.add("Parameters",outerPanel);
+    }
+
+    /**
+     * Tells you what a particular parameter is used for.
+     */
+    @Override
+    public String getParameterDescription(int stream, int which){
+        return "None";
+    }
+
+    /**
+     * Tells you what a particular value is used for.
+     */
+    @Override
+    public String getValueDescription(int stream, int which){
+        if(which<coordinateData.size()) {
+            return coordinateData.get(which).desc.getValue();
+        } else {
+            return valueSpecs.get(which-coordinateData.size()).desc.getValue();
+        }
+    }
+
+    @Override
+    public int getNumParameters(int stream){
+        return 0;
+    }
+
+    @Override
+    public int getNumValues(int stream){
+        return coordinateData.size()+valueSpecs.size();
+    }
+
+    @Override
+    public BinnedFilter copy(List<GraphElement> l) {
+        return new BinnedFilter(this,l);
+    }
+
+    private void newCoordinateSelected() {
+        if(coordinateList.getSelectedIndex()<0) return;
+        coordinatePanel.removeAll();
+        coordinatePanel.add(coordinateData.get(coordinateList.getSelectedIndex()).getPropertiesPanel());
+        coordinatePanel.revalidate();
+        coordinatePanel.repaint();
+    }
+
+    private void addCoordinate() {
+        CoordinateData cd=new CoordinateData();
+        coordinateData.add(cd);
+        coordinateList.setListData(coordinateData.toArray());
+        coordinateList.setSelectedIndex(coordinateData.size()-1);		
+    }
+
+    private void removeCoordinate() {
+        if(coordinateList.getSelectedIndex()<0) return;
+        if(coordinateData.size()<=1) {
+            JOptionPane.showMessageDialog(coordinateList,"You can't remove the last coordinate.");
+            return;
+        }
+        coordinateData.remove(coordinateList.getSelectedIndex());
+        coordinateList.setListData(coordinateData.toArray());
+        coordinatePanel.revalidate();
+        coordinatePanel.repaint();
+    }
+
+    private void newValueSelected() {
+        if(valueList.getSelectedIndex()<0) return;
+        valuePanel.removeAll();
+        valuePanel.add(valueSpecs.get(valueList.getSelectedIndex()).getPropertiesPanel());
+        valuePanel.revalidate();
+        valuePanel.repaint();
+    }
+
+    private void addValue() {
+        BinValueSpec bvs=new BinValueSpec();
+        valueSpecs.add(bvs);
+        valueList.setListData(valueSpecs.toArray());
+        valueList.setSelectedIndex(valueSpecs.size()-1);		
+    }
+
+    private void removeValue() {
+        if(valueList.getSelectedIndex()<0) return;
+        if(valueSpecs.size()<=1) {
+            JOptionPane.showMessageDialog(valueList,"You can't remove the last coordinate.");
+            return;
+        }
+        valueSpecs.remove(valueList.getSelectedIndex());
+        valueList.setListData(valueSpecs.toArray());
+        valuePanel.revalidate();
+        valuePanel.repaint();
+    }
+
+    @Override
+    protected boolean doingInThreads() {
+        return false;
+    }
+
+    @Override
+    protected void redoAllElements() {
+        DataSource input=getSource(0);
+        sizeDataVectToInputStreams();
+        for(int s=0; s<input.getNumStreams(); ++s) {
+            for(CoordinateData cd:coordinateData) {
+                cd.setRange(s);
+            }
+            if(fillers==null) makeFillers();
+
+            // Fill bins
+            Object[] bins=null;
+            if(coordinateData.size()>1) {
+                bins=new Object[coordinateData.get(0).getBinCount()];
+            } else {
+                bins=new BinData[coordinateData.get(0).getBinCount()];
+            }
+            int[][] ranges=new int[valueSpecs.size()][];
+            for(int i=0; i<valueSpecs.size(); ++i) {
+                ranges[i]=valueSpecs.get(i).formula.getSafeElementRange(this,s);
+                DataFormula.checkRangeSafety(ranges[i],this);
+            }
+            int maxPass=0;
+            for(BinValueSpec spec:valueSpecs) {
+                if(fillers[spec.combineStyle].numPasses()>maxPass) {
+                    maxPass=fillers[spec.combineStyle].numPasses();
+                }
+            }
+            for(int p=0; p<maxPass; ++p) {
+                for(int i=0; i<input.getNumElements(s); ++i) {
+                    float[] values=new float[valueSpecs.size()];
+                    float[] weights=new float[valueSpecs.size()];
+                    for(int j=0; j<values.length; ++j) {
+                        if(i>=ranges[j][0] && i<ranges[j][1]) {
+                            values[j]=(float)valueSpecs.get(j).formula.valueOf(this,s,i);
+                            weights[j]=(float)valueSpecs.get(j).weight.valueOf(this,s,i);
+                        }
+                    }
+                    if(coordinateData.size()>1) {
+                        storeValues(p,s,i,values,weights,bins,0);
+                    } else {
+                        storeValuesLast(p,s,i,values,weights,(BinData[])bins,0);
+                    }
+                }
+                // Finalize bins
+                finalizeBins(p,bins);
+            }
+
+            // Convert to grid of elements.
+            float[] elementData=new float[coordinateData.size()+valueSpecs.size()];
+            fillVector(bins,0,elementData,s);
+        }
+    }
+
+    private void storeValues(int pass,int stream,int index,float[] values,float[] weights,
+            Object[] bins,int coordNum) {
+        CoordinateData cd=coordinateData.get(coordNum);
+        int bin=cd.getBinFor(stream,index);
+        if(bin<0 || bin>=cd.getBinCount()) return;
+        if(coordNum==coordinateData.size()-2) {
+            if(bins[bin]==null) {
+                CoordinateData nextCd=coordinateData.get(coordNum+1);
+                bins[bin]=new BinData[nextCd.getBinCount()];
+            }
+            storeValuesLast(pass,stream,index,values,weights,(BinData[])bins[bin],coordNum+1);
+        } else {
+            if(bins[bin]==null) {
+                CoordinateData nextCd=coordinateData.get(coordNum+1);
+                bins[bin]=new Object[nextCd.getBinCount()];
+            }
+            storeValues(pass,stream,index,values,weights,(Object[])bins[bin],coordNum+1);
+        }
+    }
+
+    private void storeValuesLast(int pass,int stream,int index,float[] values,float[] weights,
+            BinData[] bins,int coordNum) {
+        CoordinateData cd=coordinateData.get(coordNum);
+        int bin=cd.getBinFor(stream,index);
+        if(bin<0 || bin>=cd.getBinCount()) return;
+        if(bins[bin]==null) {
+            bins[bin]=new BinData();
+            bins[bin].values=new float[values.length];
+            bins[bin].weights=new float[weights.length];
+            for(int i=0; i<values.length; ++i) {
+                fillers[valueSpecs.get(i).combineStyle].initValue(i,bins[bin]);
+            }
+        }
+        for(int i=0; i<values.length; ++i) {
+            fillers[valueSpecs.get(i).combineStyle].addValue(pass,values[i],weights[i],i,bins[bin]);
+        }
+    }
+
+    private void finalizeBins(int pass,Object[] bins) {
+        if(bins instanceof BinData[]) {
+            BinData[] specBins=(BinData[])bins;
+            for(int i=0; i<specBins.length; ++i) {
+                if(specBins[i]!=null) {
+                    for(int j=0; j<valueSpecs.size(); ++j) {
+                        BinValueSpec bvs=valueSpecs.get(j);
+                        fillers[bvs.combineStyle].finalize(pass,j,specBins[i]);
+                    }
+                }
+            }
+        } else {
+            for(int i=0; i<bins.length; ++i) {
+                if(bins[i]!=null) {
+                    finalizeBins(pass,(Object[])bins[i]);
+                }
+            }
+        }
+    }
+
+    private void fillVector(Object[] bins,int coordNum,float[] elementData,int stream) {
+        CoordinateData coord=coordinateData.get(coordNum);
+        if(coordNum==0 && addAveragedSurfaceBuffers) {
+            elementData[coordNum]=(float)(coord.min.getValue()-(coord.max.getValue()-coord.min.getValue())/coord.getBinCount());
+            if(coordinateData.size()>1) {
+                CoordinateData coord2=coordinateData.get(coordNum+1);
+                for(int i=-1; i<coord2.getBinCount(); ++i) {
+                    elementData[coordNum+1]=(float)(coord2.min.getValue()+i*(coord2.max.getValue()-coord2.min.getValue())/coord2.getBinCount());
+                    for(int j=0; j<valueSpecs.size(); ++j) {
+                        elementData[j+coordinateData.size()]=valueSpecs.get(j).defaultValue;
+                    }
+                    dataVect.get(stream).add(new DataElement(new int[0],elementData));
+                }
+            }
+        }
+        if(bins==null) {
+            if(!makeFinalDataSparse) {
+                if(coordNum==coordinateData.size()-1) {
+                    if(addAveragedSurfaceBuffers) {
+                        elementData[coordNum]=(float)(coord.min.getValue()-(coord.max.getValue()-coord.min.getValue())/coord.getBinCount());
+                        for(int j=0; j<valueSpecs.size(); ++j) {
+                            elementData[j+coordinateData.size()]=valueSpecs.get(j).defaultValue;
+                        }
+                        dataVect.get(stream).add(new DataElement(new int[0],elementData));
+                    }
+                    for(int i=0; i<coord.getBinCount(); ++i) {
+                        elementData[coordNum]=(float)(coord.min.getValue()+i*(coord.max.getValue()-coord.min.getValue())/coord.getBinCount());
+                        for(int j=0; j<valueSpecs.size(); ++j) {
+                            elementData[j+coordinateData.size()]=valueSpecs.get(j).defaultValue;
+                        }
+                        dataVect.get(stream).add(new DataElement(new int[0],elementData));
+                    }
+                } else {
+                    for(int i=0; i<coord.getBinCount(); ++i) {
+                        elementData[coordNum]=(float)(coord.min.getValue()+i*(coord.max.getValue()-coord.min.getValue())/coord.getBinCount());
+                        fillVector(null,coordNum+1,elementData,stream);
+                    }
+                }
+            }
+        } else {
+            if(coordNum==coordinateData.size()-1) {
+                BinData[] specBins=(BinData[])bins;
+                if(addAveragedSurfaceBuffers) {
+                    elementData[coordNum]=(float)(coord.min.getValue()-(coord.max.getValue()-coord.min.getValue())/coord.getBinCount());
+                    for(int j=0; j<valueSpecs.size(); ++j) {
+                        elementData[j+coordinateData.size()]=valueSpecs.get(j).defaultValue;
+                    }
+                    dataVect.get(stream).add(new DataElement(new int[0],elementData));
+                }
+                for(int i=0; i<bins.length; ++i) {
+                    elementData[coordNum]=(float)(coord.min.getValue()+i*(coord.max.getValue()-coord.min.getValue())/coord.getBinCount());
+                    if(specBins[i]==null) {
+                        for(int j=0; j<valueSpecs.size(); ++j) {
+                            elementData[j+coordinateData.size()]=valueSpecs.get(j).defaultValue;
+                        }
+                    } else {
+                        for(int j=0; j<specBins[i].values.length; ++j) {
+                            elementData[j+coordinateData.size()]=specBins[i].values[j];
+                        }
+                    }
+                    dataVect.get(stream).add(new DataElement(new int[0],elementData));
+                }
+            } else {
+                for(int i=0; i<bins.length; ++i) {
+                    elementData[coordNum]=(float)(coord.min.getValue()+i*(coord.max.getValue()-coord.min.getValue())/coord.getBinCount());
+                    fillVector((Object[])bins[i],coordNum+1,elementData,stream);
+                }
+            }
+        }
+    }
+
+    private void makeFillers() {
+        fillers=new BinFiller[]{new SumFiller(),new AverageFiller(),
+                new AngleAverageFiller(),new MinFiller(),new MaxFiller(),
+                new RMSFiller(),new STDFiller()};
+    }
+
+    // Every elements has coordinates first then the binned values.
+    private ArrayList<CoordinateData> coordinateData;
+    private ArrayList<BinValueSpec> valueSpecs;
+    private boolean addAveragedSurfaceBuffers=false;
+    private boolean makeFinalDataSparse=false;
+
+    private static final long serialVersionUID=74683483457l;
+
+    private transient JList coordinateList;
+    private transient JList valueList;
+    private transient JPanel coordinatePanel;
+    private transient JPanel valuePanel;
+    private transient BinFiller[] fillers;
+
+    /**
+     * This gives the data needed for a coordinate that we will bin across.
+     *
+     * @author Mark Lewis     */
+    private class CoordinateData implements java.io.Serializable {
+        public CoordinateData() {}
+        public CoordinateData(CoordinateData c) {
+            desc=new EditableString(c.desc.getValue());
+            formula=new DataFormula(c.formula);
+            autoRange=new EditableBoolean(c.autoRange.getValue());
+            min=new EditableDouble(c.min.getValue());
+            max=new EditableDouble(c.max.getValue());
+            binCount=new EditableInt(c.binCount.getValue());
+            binSize=new EditableDouble(c.binSize.getValue());
+        }
+        public int getBinFor(int stream,int index) {
+            double value=formula.valueOf(BinnedFilter.this,stream, index);
+            if(binCount.getValue()>0)
+                return (int)(binCount.getValue()*(value-min.getValue())/(max.getValue()-min.getValue()));
+            else
+                return (int)((value-min.getValue())/binSize.getValue());
+        }
+        public JPanel getPropertiesPanel() {
+            if(propPanel==null) {
+                propPanel=new JPanel(new GridLayout(7,1));
+                // description
+                JPanel innerPanel=new JPanel(new BorderLayout());
+                innerPanel.add(new JLabel("Description"),BorderLayout.WEST);
+                innerPanel.add(desc.getTextField(new EditableString.Listener() {
+                    @Override
+                    public void valueChanged() {
+                        coordinateList.setListData(coordinateData.toArray());
+                    }                    
+                }),BorderLayout.CENTER);
+                propPanel.add(innerPanel);
+
+                // formula
+                innerPanel=new JPanel(new BorderLayout());
+                innerPanel.add(new JLabel("Formula"),BorderLayout.WEST);
+                innerPanel.add(formula.getTextField(null),BorderLayout.CENTER);
+                propPanel.add(innerPanel);
+
+                // auto
+                propPanel.add(autoRange.getCheckBox("Auto Range?",new EditableBoolean.Listener() {
+                    @Override
+                    public void valueChanged() { setRange(0); }
+                }));
+
+                // min
+                innerPanel=new JPanel(new BorderLayout());
+                innerPanel.add(new JLabel("Minimum"),BorderLayout.WEST);
+                innerPanel.add(min.getTextField(null),BorderLayout.CENTER);
+                propPanel.add(innerPanel);
+
+                // max
+                innerPanel=new JPanel(new BorderLayout());
+                innerPanel.add(new JLabel("Maximum"),BorderLayout.WEST);
+                innerPanel.add(max.getTextField(null),BorderLayout.CENTER);
+                propPanel.add(innerPanel);
+
+                // bin count
+                innerPanel=new JPanel(new BorderLayout());
+                innerPanel.add(new JLabel("Bin Count (if >0)"),BorderLayout.WEST);
+                innerPanel.add(binCount.getTextField(null),BorderLayout.CENTER);
+                propPanel.add(innerPanel);
+
+                // bin size
+                innerPanel=new JPanel(new BorderLayout());
+                innerPanel.add(new JLabel("or Bin Size"),BorderLayout.WEST);
+                innerPanel.add(binSize.getTextField(null),BorderLayout.CENTER);
+                propPanel.add(innerPanel);
+            }
+            return propPanel;
+        }
+        public void setRange(int stream) {
+            if(!autoRange.getValue()) return;
+            double lmin,lmax;
+            int[] range=formula.getSafeElementRange(BinnedFilter.this,stream);
+            if(range[0]>=range[1]) return;
+            lmin=formula.valueOf(BinnedFilter.this,stream, range[0]);
+            lmax=lmin;
+            for(int i=range[0]; i<range[1]; ++i) {
+                double val=formula.valueOf(BinnedFilter.this,stream, i);
+                if(val<lmin) lmin=val;
+                if(val>lmax) lmax=val;
+            }
+            min.setValue(lmin);
+            max.setValue(lmax+1e-7*(lmax-lmin));
+        }
+        public int getBinCount() {
+            if(binCount.getValue()>0) {
+                return binCount.getValue();
+            } else {
+                return (int)((max.getValue()-min.getValue())/binSize.getValue());
+            }            
+        }
+        @Override
+        public String toString() { return desc.getValue(); }
+        public EditableString desc=new EditableString("x");
+
+        public DataFormula formula = new DataFormula("v[0]");
+
+        public EditableBoolean autoRange=new EditableBoolean(true);
+        public EditableDouble min=new EditableDouble(0.0);
+        public EditableDouble max=new EditableDouble(1.0);
+        public EditableInt binCount=new EditableInt(100);
+        public EditableDouble binSize=new EditableDouble(0.0);
+
+        private static final long serialVersionUID=58348273468l;
+
+        private transient JPanel propPanel;	
+    }
+
+    /**
+     * @author Mark Lewis     *      * This class gives the specification for how to calculate a certain value for     * each bin.  It includes a DataFormula and a method of combining things.  The     * methods are things like sum and average.  A density can be found by using "1"     * for the formula and doing a sum.
+     */
+    private class BinValueSpec implements java.io.Serializable {
+        public BinValueSpec() {}
+        public BinValueSpec(BinValueSpec c) {
+            desc=new EditableString(c.desc.getValue());
+            formula=new DataFormula(c.formula);
+            weight=new DataFormula(c.weight);
+            combineStyle=c.combineStyle;
+            defaultValue=c.defaultValue;
+        }
+        @Override
+        public String toString() { return desc.getValue(); }
+        public JPanel getPropertiesPanel() {
+            if(propPanel==null) {
+                propPanel=new JPanel(new GridLayout(4,1));
+                // description
+                JPanel innerPanel=new JPanel(new BorderLayout());
+                innerPanel.add(new JLabel("Description"),BorderLayout.WEST);
+                innerPanel.add(desc.getTextField(new EditableString.Listener() {
+                    @Override
+                    public void valueChanged() {
+                        valueList.setListData(valueSpecs.toArray());
+                    }
+                }),BorderLayout.CENTER);
+                propPanel.add(innerPanel);
+
+                // formula
+                innerPanel=new JPanel(new BorderLayout());
+                innerPanel.add(new JLabel("Formula"),BorderLayout.WEST);
+                innerPanel.add(formula.getTextField(null),BorderLayout.CENTER);
+                propPanel.add(innerPanel);
+
+                // weight
+                innerPanel=new JPanel(new BorderLayout());
+                innerPanel.add(new JLabel("Weight"),BorderLayout.WEST);
+                innerPanel.add(weight.getTextField(null),BorderLayout.CENTER);
+                propPanel.add(innerPanel);
+
+                // combine style
+                if(fillers==null) makeFillers();
+                JComboBox comboBox=new JComboBox(fillers);
+                comboBox.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) { combineStyle=((JComboBox)e.getSource()).getSelectedIndex(); }
+                } );
+                comboBox.setSelectedIndex(combineStyle);
+                propPanel.add(comboBox);
+            }
+            return propPanel;
+        }
+        public EditableString desc=new EditableString("Count");
+        public DataFormula formula = new DataFormula("1");
+        public DataFormula weight = new DataFormula("1");
+        public int combineStyle=0;
+        public float defaultValue=0.0f;
+
+        private transient JPanel propPanel;	
+
+        private static final long serialVersionUID=192309253l;
+    }
+
+    private static class BinData {        
+        public float[] values=null;
+        public float[] weights=null;
+        public float[] means=null;  // only used by RMS, null is not used.
+    }
+
+    public interface BinFiller extends Serializable {
+        /**
+         * Tells how many passes through the data are needed for this type of binning.
+         * For example, RMS requires two.  Most forms of combining information require only
+         * one pass.
+         * @return Number of passes to make.
+         */
+        int numPasses();
+
+        /**
+         * This sets up the value in this bin with the right index for the
+         * particular filler.
+         * @param bd
+         */
+        void initValue(int index,BinData bd);
+
+        /**
+         * Adds in a value with the given weight using the proper combination technique.
+         * @param v
+         * @param w
+         */
+        void addValue(int pass,float v,float w,int index,BinData bd);
+
+        /**
+         * Sets the values appropriately assuming all the data has been put into this
+         * bin.  If this is for a multi-pass filler, this will be called at the end of
+         * each pass.
+         */
+        void finalize(int pass,int index,BinData bd);
+    }
+
+    private static class SumFiller implements BinFiller {
+        @Override
+        public int numPasses() {
+            return 1;
+        }
+
+        @Override
+        public void initValue(int index,BinData bd) {
+        }
+
+        @Override
+        public void addValue(int pass, float v, float w, int index, BinData bd) {
+            if(pass==0) {
+                bd.values[index]+=v*w;
+            }
+        }
+
+        @Override
+        public void finalize(int pass, int index, BinData bd) {
+        }
+
+        @Override
+        public String toString() { return "Sum"; }
+
+        private static final long serialVersionUID = 2799611154568648955L;
+    }
+
+    private static class AverageFiller implements BinFiller {
+        @Override
+        public int numPasses() {
+            return 1;
+        }
+
+        @Override
+        public void initValue(int index,BinData bd) {
+        }
+
+        @Override
+        public void addValue(int pass, float v, float w, int index, BinData bd) {
+            if(pass==0) {
+                bd.values[index]+=v*w;
+                bd.weights[index]+=w;
+            }
+        }
+
+        @Override
+        public void finalize(int pass, int index, BinData bd) {
+            if(pass==0 && bd.weights[index]!=0) {
+                bd.values[index]/=bd.weights[index];
+            }
+        }
+
+        @Override
+        public String toString() { return "Average"; }
+
+        private static final long serialVersionUID = 27996579832756L;
+    }
+
+    private static class AngleAverageFiller implements BinFiller {
+        @Override
+        public int numPasses() {
+            return 1;
+        }
+
+        @Override
+        public void initValue(int index,BinData bd) {
+        }
+
+        @Override
+        public void addValue(int pass, float v, float w, int index, BinData bd) {
+            if(pass==0) {
+                if(bd.weights[index]>0) {
+                    while(bd.values[index]/bd.weights[index]-v<-Math.PI) {
+                        v-=2*Math.PI;
+                    }
+                    while(bd.values[index]/bd.weights[index]-v>Math.PI) {
+                        v+=2*Math.PI;
+                    }
+                }
+                bd.values[index]+=v*w;
+                bd.weights[index]+=w;
+            }
+        }
+
+        @Override
+        public void finalize(int pass, int index, BinData bd) {
+            if(pass==0 && bd.weights[index]!=0) {
+                bd.values[index]/=bd.weights[index];
+            }
+        }
+
+        @Override
+        public String toString() { return "Angle Average"; }
+
+        private static final long serialVersionUID = 875896734548955L;
+    }
+
+    private static class MinFiller implements BinFiller {
+        @Override
+        public int numPasses() {
+            return 1;
+        }
+
+        @Override
+        public void initValue(int index,BinData bd) {
+            bd.values[index]=Float.MAX_VALUE;
+            bd.weights[index]=Float.MAX_VALUE;
+        }
+
+        @Override
+        public void addValue(int pass, float v, float w, int index, BinData bd) {
+            if(pass==0) {
+                if(v*w<bd.values[index]) {
+                    bd.values[index]=v*w;
+                    bd.weights[index]=w;
+                }
+            }
+        }
+
+        @Override
+        public void finalize(int pass, int index, BinData bd) {
+            if(pass==0 && bd.weights[index]!=0) {
+                bd.values[index]/=bd.weights[index];
+            }
+        }
+
+        @Override
+        public String toString() { return "Min"; }
+
+        private static final long serialVersionUID = 97365623864758L;
+    }
+
+    private static class MaxFiller implements BinFiller {
+        @Override
+        public int numPasses() {
+            return 1;
+        }
+
+        @Override
+        public void initValue(int index,BinData bd) {
+            bd.values[index]=-Float.MAX_VALUE;
+            bd.weights[index]=-Float.MAX_VALUE;
+        }
+
+        @Override
+        public void addValue(int pass, float v, float w, int index, BinData bd) {
+            if(pass==0) {
+                if(v*w>bd.values[index]) {
+                    bd.values[index]=v*w;
+                    bd.weights[index]=w;
+                }
+            }
+        }
+
+        @Override
+        public void finalize(int pass, int index, BinData bd) {
+            if(pass==0 && bd.weights[index]!=0) {
+                bd.values[index]/=bd.weights[index];
+            }
+        }
+
+        @Override
+        public String toString() { return "Max"; }
+
+        private static final long serialVersionUID = 146235756238658L;
+    }
+
+    private static class RMSFiller implements BinFiller {
+        @Override
+        public int numPasses() {
+            return 1;
+        }
+
+        @Override
+        public void initValue(int index,BinData bd) {
+        }
+
+        @Override
+        public void addValue(int pass, float v, float w, int index, BinData bd) {
+            if(pass==0) {
+                bd.values[index]+=v*v*w;
+                bd.weights[index]+=w;
+            }
+        }
+
+        @Override
+        public void finalize(int pass, int index, BinData bd) {
+            if(pass==0 && bd.weights[index]!=0) {
+                bd.values[index]=(float)Math.sqrt(bd.values[index]/bd.weights[index]);
+            }
+        }
+
+        @Override
+        public String toString() { return "Root Mean Square"; }
+
+        private static final long serialVersionUID = 27965779832756L;
+    }
+
+    private static class STDFiller implements BinFiller {
+        @Override
+        public int numPasses() {
+            return 2;
+        }
+
+        @Override
+        public void initValue(int index,BinData bd) {
+        }
+
+        @Override
+        public void addValue(int pass, float v, float w, int index, BinData bd) {
+            if(pass==0) {
+                bd.values[index]+=v*w;
+                bd.weights[index]+=w;
+            } else if(pass==1) {
+                float diff=v-bd.means[index];
+                bd.values[index]+=diff*diff*w;
+                bd.weights[index]+=w;
+            }
+        }
+
+        @Override
+        public void finalize(int pass, int index, BinData bd) {
+            if(pass==0) {
+                if(bd.means==null) bd.means=new float[bd.values.length];
+                if(bd.weights[index]!=0) {
+                    bd.means[index]=bd.values[index]/bd.weights[index];
+                }
+                bd.values[index]=0;
+                bd.weights[index]=0;
+            } else if(pass==1) {
+                bd.values[index]=(float)Math.sqrt(bd.values[index]/bd.weights[index]);
+            }
+        }
+
+        @Override
+        public String toString() { return "RMS Standard Deviation"; }
+
+        private static final long serialVersionUID = 97365623864758L;
+    }
+}
